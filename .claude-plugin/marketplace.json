@@ -1,0 +1,27 @@
+{
+  "name": "techdrawai",
+  "owner": {
+    "name": "TechDraw AI",
+    "url": "https://techdrawai.com"
+  },
+  "plugins": [
+    {
+      "name": "techdrawai",
+      "source": "./",
+      "description": "Photo to technical drawing, CAD-ready DXF and DWG, 3D models and product renders.",
+      "version": "0.1.0",
+      "skills": [
+        {
+          "name": "drafting",
+          "path": "skills/techdrawai-drafting/SKILL.md",
+          "invoke": "/techdrawai:drafting"
+        },
+        {
+          "name": "cad",
+          "path": "skills/techdrawai-cad/SKILL.md",
+          "invoke": "/techdrawai:cad"
+        }
+      ]
+    }
+  ]
+}

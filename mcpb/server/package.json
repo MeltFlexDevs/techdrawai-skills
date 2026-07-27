@@ -1,0 +1,12 @@
+{
+  "name": "techdrawai-mcpb-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bundled TechDraw AI MCP server for the Claude Desktop Extension (MCPB).",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.23.8"
+  }
+}

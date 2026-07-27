@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.MeltFlexDevs/techdrawai",
+  "title": "TechDraw AI",
+  "description": "Photo to technical drawing, CAD-ready DXF and DWG, 3D models and product renders.",
+  "version": "0.1.0",
+  "websiteUrl": "https://techdrawai.com/mcp",
+  "repository": {
+    "url": "https://github.com/MeltFlexDevs/techdrawai-skills",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "techdrawai-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "TECHDRAWAI_API_KEY",
+          "description": "Your TechDraw AI API key (tda_sk_...). Requires an active Studio plan. Create one at https://techdrawai.com/app?view=settings, or run `npx -y techdrawai-mcp auth login` to sign in through the browser instead.",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

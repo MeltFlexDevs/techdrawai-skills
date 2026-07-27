@@ -1,0 +1,77 @@
+{
+  "manifest_version": "0.2",
+  "name": "techdrawai",
+  "display_name": "TechDraw AI",
+  "version": "0.1.0",
+  "description": "Photo to technical drawing, CAD-ready DXF and DWG, 3D models and product renders.",
+  "long_description": "TechDraw AI turns a photograph of a physical part into engineering documentation, directly from Claude. Draft a dimensioned, standards-compliant 2D technical drawing (ISO or ANSI, first or third angle, working, assembly, as-fitted or patent), trace it into real CAD contours as DXF or DWG at true size, reconstruct the part as a textured 3D mesh, or render it as a finished product shot. Tools: generate_technical_drawing, image_to_dxf, render_product, photo_to_3d, identify_product and check_credits. Requires a TechDraw AI API key on the Studio plan; every generation is billed to your own account credits and refunded automatically on failure.",
+  "author": {
+    "name": "TechDraw AI",
+    "url": "https://github.com/MeltFlexDevs"
+  },
+  "homepage": "https://techdrawai.com/mcp",
+  "documentation": "https://techdrawai.com/mcp",
+  "license": "MIT",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/cli.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/cli.js"],
+      "env": {
+        "TECHDRAWAI_API_KEY": "${user_config.api_key}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "generate_technical_drawing",
+      "description": "Turn a product photo into a dimensioned 2D technical drawing with orthographic views, dimension lines and the projection symbol (3 credits)."
+    },
+    {
+      "name": "image_to_dxf",
+      "description": "Trace any image into real CAD contours and write a DXF, optionally a DWG as well. Set width_mm for true size (free)."
+    },
+    {
+      "name": "render_product",
+      "description": "Reconstruct the object described by a technical drawing and render it as a photorealistic product shot (3 credits)."
+    },
+    {
+      "name": "photo_to_3d",
+      "description": "Reconstruct a textured 3D mesh from a photo of a single object, downloaded as GLB (3 credits)."
+    },
+    {
+      "name": "identify_product",
+      "description": "Name the main object in a photo, to fill in the product name before drafting (free)."
+    },
+    {
+      "name": "check_credits",
+      "description": "Show the account's credit balance, plan and per-operation costs."
+    }
+  ],
+  "keywords": [
+    "technical-drawing",
+    "cad",
+    "dxf",
+    "dwg",
+    "engineering",
+    "manufacturing",
+    "3d-model"
+  ],
+  "user_config": {
+    "api_key": {
+      "type": "string",
+      "title": "TechDraw AI API Key",
+      "description": "Your tda_sk_ API key from techdrawai.com/app (Settings, API keys). Requires an active Studio plan.",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}
