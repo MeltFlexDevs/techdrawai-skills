@@ -1,8 +1,16 @@
+import { createRequire } from "node:module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { TechDrawAiClient } from "./api.js";
+import { ApiError, TechDrawAiClient } from "./api.js";
+import { DRAWING_COST, MODEL_3D_COST } from "./config.js";
 import { downloadToFile, saveBuffer, saveImage, saveText, withExtension, } from "./util.js";
-export const VERSION = "0.1.0";
+/**
+ * Read from package.json rather than written out here. A hardcoded copy is a
+ * third place to remember on every release — and the one that goes stale
+ * silently, because nothing fails when the number an MCP client is told
+ * disagrees with the version it actually installed.
+ */
+export const VERSION = createRequire(import.meta.url)("./package.json").version;
 /**
  * MCP surface for TechDraw AI.
  *
@@ -13,16 +21,23 @@ export const VERSION = "0.1.0";
  * Chaining is the point: `generate_technical_drawing` → `image_to_dxf` gets you
  * from a photograph to CAD geometry in two calls.
  */
-/** Turn any thrown value into the error content block MCP expects. */
+/**
+ * Turn any thrown value into the error content block MCP expects.
+ *
+ * An ApiError already carries the server's own sentence — written for a person,
+ * complete on its own, and often naming the fix. Prefixing it produces
+ * "Product identification failed: Product identification failed: …", which
+ * reads like a bug because it is one. Local failures (a missing file, a
+ * timeout, an unparseable reply) carry no such context, so those keep the
+ * prefix that says which tool they came from.
+ */
 function toolError(action, err) {
+    const message = err instanceof ApiError
+        ? err.message
+        : `${action} failed: ${err instanceof Error ? err.message : String(err)}`;
     return {
         isError: true,
-        content: [
-            {
-                type: "text",
-                text: `${action} failed: ${err instanceof Error ? err.message : String(err)}`,
-            },
-        ],
+        content: [{ type: "text", text: message }],
     };
 }
 function text(body) {
@@ -37,7 +52,7 @@ export function createServer() {
             "Supply the photo as a local file path, an http(s) URL or a data URL. " +
             "Either let the model estimate real-world dimensions, or pass measurements you actually took so the drawing is anchored to real sizes. " +
             "Choose the drafting standard (ISO/ANSI), sheet size, projection angle, drawing type and which views to include. " +
-            "Costs 3 credits. The drawing image is saved to disk and its path returned — feed that path to `image_to_dxf` for CAD geometry, or to `render_product` for a photoreal render.",
+            `Costs ${DRAWING_COST} credits. The drawing image is saved to disk and its path returned — feed that path to \`image_to_dxf\` for CAD geometry, or to \`render_product\` for a photoreal render.`,
         inputSchema: {
             image: z
                 .string()
@@ -125,13 +140,68 @@ export function createServer() {
             return toolError("Technical drawing generation", err);
         }
     });
+    /* --------------------------------------------- text to drawing -- */
+    server.registerTool("text_to_technical_drawing", {
+        title: "Draw a part from a written description",
+        description: "Turn a description of a part, with its sizes, into a dimensioned 2D technical drawing: orthographic views plus an isometric, dimension lines, centre lines and the projection symbol. No photo needed. " +
+            "Every number in the prompt is drawn as given; sizes the prompt leaves out are estimated and the sheet says UNSTATED DIMENSIONS NOMINAL. So put every size you know in the prompt. " +
+            "The image is the views only, with no border or title block. It is a picture, not CAD geometry: the drawn lines are not to exact scale. " +
+            `Costs ${DRAWING_COST} credits and takes about 30 to 60 seconds. The drawing is saved to disk and its path returned.`,
+        inputSchema: {
+            prompt: z
+                .string()
+                .min(1)
+                .max(1000)
+                .describe('What the part is and every size you know, e.g. "Steel L bracket, legs 80 and 60 mm, 40 wide, 5 thick, two 8.5 mm holes in each leg". Name materials and tolerances here too if they belong on the drawing.'),
+            standard: z
+                .enum(["ISO", "ANSI"])
+                .optional()
+                .describe("Drafting standard. ISO (default) or ANSI (ASME, drawn for an ANSI B sheet)."),
+            projection: z
+                .enum(["first-angle", "third-angle"])
+                .optional()
+                .describe("Projection angle. Defaults to first-angle on ISO, third-angle on ANSI."),
+            paper_size: z
+                .enum(["A4", "A3", "A2", "A1"])
+                .optional()
+                .describe("ISO sheet the views are proportioned for. Defaults to A3."),
+            units: z
+                .enum(["mm", "in"])
+                .optional()
+                .describe('Units of the bare numbers in the prompt. Omit to read them from the prompt (an inch mark or "in" means inches, otherwise mm).'),
+            output_path: z
+                .string()
+                .optional()
+                .describe("Where to save the drawing. Defaults to ./techdrawai-output/text-drawing-<timestamp>.png."),
+        },
+    }, async (args) => {
+        try {
+            const client = TechDrawAiClient.fromConfig();
+            const result = await client.textDrawing({
+                prompt: args.prompt,
+                standard: args.standard,
+                projection: args.projection,
+                paperSize: args.paper_size,
+                units: args.units,
+            });
+            const target = saveImage(result.image, args.output_path, "text-drawing");
+            const o = result.options;
+            return text(`Technical drawing saved to:\n  ${target}\n\n` +
+                `${o.standard} · ${o.projection} · ${o.paperSize} · ${o.units}\n` +
+                `Credits used: ${result.creditsUsed} · Balance: ${result.balance}\n` +
+                "Next: `render_product` on this file for a photoreal render, or `drawing_to_3d` for a mesh.");
+        }
+        catch (err) {
+            return toolError("Text to drawing", err);
+        }
+    });
     /* -------------------------------------------------- product render -- */
     server.registerTool("render_product", {
         title: "Render a product from a technical drawing",
         description: "The reverse of drafting: take a 2D technical drawing and produce a photorealistic image of the finished, manufactured product. " +
             "The geometry is reconstructed from the views in the drawing, so the render matches the design rather than inventing a new one. " +
             "Choose the look (photoreal, studio, matte clay, lifestyle), the background, the camera angle and the material/finish. " +
-            "Costs 3 credits. The render is saved to disk and its path returned.",
+            `Costs ${DRAWING_COST} credits. The render is saved to disk and its path returned.`,
         inputSchema: {
             image: z
                 .string()
@@ -249,13 +319,77 @@ export function createServer() {
             return toolError("DXF conversion", err);
         }
     });
+    /* -------------------------------------------------------- image→STL -- */
+    server.registerTool("image_to_stl", {
+        title: "Convert an image to a 3D printable STL",
+        description: "Trace a raster image — a logo, a sign, a stencil, a line drawing — and extrude it into a solid, watertight binary STL ready to slice and print. " +
+            "The shape is flattened artwork given a thickness, not a reconstruction of a real object: use `photo_to_3d` for that. " +
+            "`size_mm` sets the longest side of the finished model and `thickness_mm` how tall it stands. " +
+            "Free — no credits. Returns the path of the .stl written.",
+        inputSchema: {
+            image: z
+                .string()
+                .describe("The image to trace: a local file path, an http(s) URL, or a data:image/…;base64,… URL."),
+            threshold: z
+                .union([z.number().min(0).max(255), z.literal("auto")])
+                .optional()
+                .describe('Luminance cut-off between ink and paper. "auto" (default) picks it from the image. Give a number to force it.'),
+            invert: z
+                .boolean()
+                .optional()
+                .describe("Trace light lines on a dark background."),
+            smoothing: z
+                .number()
+                .optional()
+                .describe("1 (default) keeps detail; higher values smooth the contours, and this is the fastest way to shrink an oversized mesh."),
+            max_dim: z
+                .number()
+                .optional()
+                .describe("Longest traced side in pixels (default 1600). Lowering it is the other way to cut the triangle count."),
+            thickness_mm: z
+                .number()
+                .optional()
+                .describe("How tall the extrusion stands, in millimetres (default 3)."),
+            size_mm: z
+                .number()
+                .optional()
+                .describe("Longest side of the finished model, in millimetres (default 100). The other side follows the artwork's aspect ratio."),
+            min_feature_mm: z
+                .number()
+                .optional()
+                .describe("Discard detail finer than this, in millimetres (default 0.3, about a nozzle width). Clears the speckle a traced photograph throws off."),
+            output_path: z
+                .string()
+                .optional()
+                .describe("Where to save the .stl. Defaults to ./techdrawai-output/model-<timestamp>.stl."),
+        },
+    }, async (args) => {
+        try {
+            const client = TechDrawAiClient.fromConfig();
+            const result = await client.stl({
+                image: args.image,
+                threshold: args.threshold,
+                invert: args.invert,
+                smoothing: args.smoothing,
+                maxDim: args.max_dim,
+                thicknessMm: args.thickness_mm,
+                sizeMm: args.size_mm,
+                minFeatureMm: args.min_feature_mm,
+            });
+            const path = saveBuffer(Buffer.from(result.stl, "base64"), args.output_path, "model", "stl");
+            return text(`STL saved to:\n  ${path}\n\n${result.triangles} triangles · ${result.widthMm} × ${result.heightMm} × ${result.thicknessMm} mm · ${result.contours} contours · threshold ${result.threshold} · no credits used`);
+        }
+        catch (err) {
+            return toolError("STL conversion", err);
+        }
+    });
     /* ---------------------------------------------------- photo → 3D -- */
     server.registerTool("photo_to_3d", {
         title: "Reconstruct a 3D model from a photo",
         description: "Turn a photograph of a single object into a textured 3D mesh, downloadable as GLB (and FBX, OBJ, USDZ, STL). " +
             "Reconstruction is asynchronous on the server and typically takes one to three minutes — the call blocks until the mesh is ready. " +
             "Needs a clear photo of one object, as JPG or PNG. " +
-            "Costs 3 credits and requires the Studio plan. The GLB is downloaded to disk and its path returned.",
+            `Costs ${MODEL_3D_COST} credits and requires the Studio plan. The GLB is downloaded to disk and its path returned.`,
         inputSchema: {
             image: z
                 .string()
@@ -297,6 +431,69 @@ export function createServer() {
         }
         catch (err) {
             return toolError("3D reconstruction", err);
+        }
+    });
+    /* -------------------------------------------------- drawing → 3D -- */
+    server.registerTool("drawing_to_3d", {
+        title: "Reconstruct a 3D model from a technical drawing",
+        description: "Turn a technical drawing — orthographic views, the kind `generate_technical_drawing` produces — into a textured 3D mesh, downloadable as GLB (and FBX, OBJ, USDZ, STL). " +
+            "A drawing is line art and nothing reconstructs 3D from line art, so the server first renders the object the views describe and reconstructs that render; both happen in one call and are charged once. " +
+            `Chaining \`render_product\` into \`photo_to_3d\` yourself does the same work and pays for the render on top — ${DRAWING_COST + MODEL_3D_COST} credits instead of ${MODEL_3D_COST}, because here the render is a step of the reconstruction rather than a second purchase. ` +
+            "The model follows the proportions of the drawing, not its dimensions — for a mesh that honours the numbers, the drawing has to be modelled in CAD. " +
+            "Typically one to three minutes; the call blocks until the mesh is ready. " +
+            `Costs ${MODEL_3D_COST} credits and requires the Studio plan. The GLB is downloaded to disk and its path returned.`,
+        inputSchema: {
+            image: z
+                .string()
+                .describe("The technical drawing (JPG, PNG or WebP): a local file path, an http(s) URL, or a data:image/…;base64,… URL."),
+            product_name: z
+                .string()
+                .optional()
+                .describe('What the drawing depicts, e.g. "wall bracket". Grounds the render, which is what the mesh follows.'),
+            style: z
+                .enum(["photoreal", "studio", "clay", "lifestyle"])
+                .optional()
+                .describe("The render the mesh is built from. photoreal (default) keeps materials and colour; clay is matte grey and reconstructs the cleanest geometry, because a specular surface gives the depth estimate nothing to lock onto."),
+            detail: z
+                .enum(["draft", "standard", "high"])
+                .optional()
+                .describe("Mesh density: draft (12k triangles), standard (40k, default) or high (80k)."),
+            textured: z
+                .boolean()
+                .optional()
+                .describe("Generate colour textures. Defaults to true."),
+            output_path: z
+                .string()
+                .optional()
+                .describe("Where to save the .glb. Defaults to ./techdrawai-output/model-<timestamp>.glb."),
+        },
+    }, async (args) => {
+        try {
+            const client = TechDrawAiClient.fromConfig();
+            const result = await client.drawingTo3d({
+                image: args.image,
+                productName: args.product_name,
+                style: args.style,
+                detail: args.detail,
+                textured: args.textured,
+            });
+            if (!result.modelUrls.glb) {
+                throw new Error("The server returned no GLB model.");
+            }
+            const target = await downloadToFile(result.modelUrls.glb, args.output_path, "model", "glb");
+            const others = Object.entries(result.modelUrls)
+                .filter(([format, url]) => format !== "glb" && url)
+                .map(([format]) => format);
+            return text(`3D model saved to:\n  ${target}\n\n` +
+                `${result.polycount.toLocaleString()} triangles · ${result.textured ? "textured" : "untextured"} · detail ${result.detail} · ${result.style} render\n` +
+                (others.length
+                    ? `Also available from the server as: ${others.join(", ")} (links expire shortly).\n`
+                    : "") +
+                `It follows the proportions of the drawing, not its dimensions.\n` +
+                `Credits used: ${result.creditsUsed} · Balance: ${result.balance}`);
+        }
+        catch (err) {
+            return toolError("Drawing to 3D", err);
         }
     });
     /* -------------------------------------------------- identify object -- */

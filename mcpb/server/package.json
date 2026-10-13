@@ -1,6 +1,6 @@
 {
   "name": "techdrawai-mcpb-server",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Bundled TechDraw AI MCP server for the Claude Desktop Extension (MCPB).",

@@ -1,7 +1,7 @@
 {
   "name": "techdrawai",
-  "version": "0.1.0",
-  "description": "Photo to technical drawing, CAD-ready DXF and DWG, 3D models and product renders.",
+  "version": "0.4.0",
+  "description": "Photo or text to technical drawing, CAD-ready DXF and DWG, printable STL, 3D models and product renders.",
   "author": {
     "name": "TechDraw AI",
     "url": "https://techdrawai.com"

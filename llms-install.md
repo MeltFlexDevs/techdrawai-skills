@@ -37,10 +37,13 @@ Ask the server for the account's balance by calling the `check_credits` tool. It
 
 | Tool | Cost |
 | --- | --- |
-| `generate_technical_drawing` | 3 credits |
+| `generate_technical_drawing` | 5 credits |
+| `text_to_technical_drawing` | 5 credits |
 | `image_to_dxf` | free |
-| `render_product` | 3 credits |
-| `photo_to_3d` | 3 credits |
+| `image_to_stl` | free |
+| `render_product` | 5 credits |
+| `photo_to_3d` | 80 credits |
+| `drawing_to_3d` | 80 credits |
 | `identify_product` | free |
 | `check_credits` | free |
 

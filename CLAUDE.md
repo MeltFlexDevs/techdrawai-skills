@@ -13,6 +13,6 @@ This repository distributes the TechDraw AI skills and the packaging around them
 ## Rules
 
 - **Version numbers move together.** `VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `mcpb/manifest.json` and `server.json` all carry one. Change one, change all of them.
-- **Do not edit `mcpb/server/*.js` by hand.** It is build output, copied from the npm package. Fix the TypeScript source instead and recopy.
+- **Do not edit `mcpb/server/*.js` by hand.** It is build output, copied from the npm package's `dist/`. Fix the TypeScript source instead and recopy. The one change the copy needs: `server.js` reads its version from `../package.json`, which is the npm package root there but does not exist here, so point it at `./package.json` (`mcpb/server/package.json`, whose version moves with the others).
 - **Credit costs appear in several files.** They are enforced server-side in the application. If a cost changes there, update the README table, both skills and `mcpb/manifest.json`.
 - **The skills carry judgement, not schemas.** Do not turn a SKILL.md into a parameter list. That is what the tool definitions and <https://techdrawai.com/api> are for.

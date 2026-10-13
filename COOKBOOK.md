@@ -17,7 +17,7 @@ The one most people want first.
   product_name: "steel wall bracket"
   measurements: [{ value: "120", unit: "mm", position: "overall width" }]
   standard: ISO · paper_size: A3 · drawing_type: working
-→ ./techdrawai-output/drawing-2026-07-27_15-04-11.png    3 credits
+→ ./techdrawai-output/drawing-2026-07-27_15-04-11.png    5 credits
 
 [image_to_dxf]
   image: ./techdrawai-output/drawing-2026-07-27_15-04-11.png
@@ -57,7 +57,7 @@ for photo in photos/*.jpg; do
 done
 ```
 
-At 3 credits a drawing, a folder of 40 parts is 120 credits, which is a Starter month. Call `check_credits` first if the folder is large.
+At 5 credits a drawing, a folder of 40 parts is 200 credits. Call `check_credits` first if the folder is large.
 
 ## An assembly drawing with a parts list
 
@@ -132,11 +132,13 @@ techdrawai credits
 ```
 TechDraw AI (you@example.com)
 Plan: studio
-Balance: 747 credits
+Balance: 745 credits
 Cost per operation:
-  • drawing: 3 credits
-  • render: 3 credits
-  • model-3d: 3 credits
+  • drawing: 5 credits
+  • text-to-drawing: 5 credits
+  • render: 5 credits
+  • model-3d: 80 credits
+  • drawing-to-3d: 80 credits
   • dxf: free
   • dwg: free
   • identify: free

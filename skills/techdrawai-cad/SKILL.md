@@ -31,15 +31,31 @@ Any raster image becomes real CAD vector contours in a DXF file. **Free.**
 The DXF is ASCII R2000 and opens in AutoCAD, Fusion 360, SolidWorks, Onshape, FreeCAD, LibreCAD, Rhino, Inkscape and the common laser and CNC tools such as LightBurn.
 
 ### `photo_to_3d`
-A photo of one object becomes a textured 3D mesh. **3 credits, Studio plan.** Takes one to three minutes and the call blocks until the mesh is ready, so tell the user it is running rather than leaving them watching a stalled prompt.
+A photo of one object becomes a textured 3D mesh. **80 credits, Studio plan**: a reconstruction runs for minutes on a GPU, so it is not priced like a drawing. Takes one to three minutes and the call blocks until the mesh is ready, so tell the user it is running rather than leaving them watching a stalled prompt.
 
 - `image` (required): a clear JPG or PNG of a **single** object.
 - `detail`: `draft` (12k triangles), `standard` (40k, default), `high` (80k).
 - `textured`: defaults to true. Turn it off when the user only wants geometry.
 - `output_path`: the GLB lands here; FBX, OBJ, USDZ and STL links are reported too.
 
+### `drawing_to_3d`
+A technical drawing becomes a textured 3D mesh. **80 credits**, the same as from a photo, one to three minutes. The server renders the object the views describe and reconstructs that render, in one call and one charge.
+
+- `image` (required): the drawing, JPG, PNG or WebP.
+- `product_name`: what it depicts.
+- `style`: `clay` gives the cleanest geometry, `photoreal` (default) keeps colour and material.
+- `detail`, `textured`, `output_path`: as `photo_to_3d`.
+
+Never chain `render_product` into `photo_to_3d` to do this by hand: same work, the render paid on top. The mesh follows the drawing's proportions, not its dimensions, so say so before anyone machines from it.
+
+### `image_to_stl`
+Flat artwork becomes a solid, watertight STL to slice and print. **Free.** The same trace as `image_to_dxf`, extruded: a logo, stencil, sign or line drawing given a thickness. A photograph of an object comes out as its outline in relief, not the object; use `photo_to_3d` for that.
+
+- `image` (required), `size_mm` (longest side, default 100), `thickness_mm` (default 3), `min_feature_mm` (default 0.3), plus `threshold`, `invert`, `smoothing`, `max_dim`, `output_path`.
+- `stl_too_large` means the trace is too detailed for one reply: `smoothing: 3` or `max_dim: 800` each roughly halve it.
+
 ### `render_product`
-A technical drawing becomes a photorealistic image of the finished product. **3 credits.** The geometry is reconstructed from the views, so the render matches the design rather than inventing a new one.
+A technical drawing becomes a photorealistic image of the finished product. **5 credits.** The geometry is reconstructed from the views, so the render matches the design rather than inventing a new one.
 
 - `image` (required): the technical drawing.
 - `style`: `photoreal` (default), `studio`, `clay`, `lifestyle`.
@@ -52,7 +68,7 @@ Balance, plan and per-operation costs. Worth calling before a batch.
 
 ## How to work with the user
 
-1. **Ask what the file is for.** It changes the answer. Laser or plasma cutting wants a DXF of the flat profile at true size. Modelling in CAD wants a DXF to trace as a sketch. 3D printing usually wants `photo_to_3d` and an STL, not a DXF at all.
+1. **Ask what the file is for.** It changes the answer. Laser or plasma cutting wants a DXF of the flat profile at true size. Modelling in CAD wants a DXF to trace as a sketch. 3D printing wants `image_to_stl` for flat artwork and `photo_to_3d` for a real object, not a DXF at all.
 2. **Always set `width_mm` when you know the size.** If the user said the part is 120 mm across, pass 120. If they have not said, ask. Geometry at the wrong scale is worse than no geometry, because it looks fine until something is cut wrong.
 3. **A DXF is contours, not a solid.** Say so. In CAD the user imports it as sketch geometry and then extrudes or revolves it. It is not a parametric model and it will not arrive with a feature tree.
 4. **`photo_to_3d` needs one object.** A photo of a cluttered bench reconstructs the clutter. Ask for a clean shot against a plain background if the first attempt is poor.

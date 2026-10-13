@@ -3,7 +3,7 @@
 Two separate things live in this repo, and you can take either or both.
 
 - **Skills** are Markdown files that teach an agent how to use TechDraw AI well: when to ask for a measurement, which drafting standard suits which audience, when a DXF beats a PNG. They carry the judgement the tool schemas cannot.
-- **The MCP server** is the actual command channel, published on npm as [`techdrawai-mcp`](https://www.npmjs.com/package/techdrawai-mcp). It gives the agent six tools.
+- **The MCP server** is the actual command channel, published on npm as [`techdrawai-mcp`](https://www.npmjs.com/package/techdrawai-mcp). It gives the agent nine tools.
 
 Most people want both. The skills alone still work: they teach the agent to drive the CLI or the REST API instead.
 

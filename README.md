@@ -1,7 +1,7 @@
 # TechDraw AI Skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-3b82f6.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-0.4.0-3b82f6.svg)](./VERSION)
 [![Skills](https://img.shields.io/badge/skills-2-8b5cf6.svg)](#skills)
 [![npm](https://img.shields.io/badge/npm-techdrawai--mcp-cb3837.svg)](https://www.npmjs.com/package/techdrawai-mcp)
 [![Website](https://img.shields.io/badge/techdrawai.com-f97316.svg)](https://techdrawai.com)
@@ -85,17 +85,20 @@ The key is shown exactly once at creation. Only its SHA-256 is stored, so nobody
 
 | Skill | Invoke | What it covers |
 | --- | --- | --- |
-| [`techdrawai-drafting`](./skills/techdrawai-drafting/SKILL.md) | `/techdrawai:drafting` | Photo to dimensioned technical drawing. Drafting standard, sheet size, projection angle, drawing type, views, and the measurements that anchor the scale. |
-| [`techdrawai-cad`](./skills/techdrawai-cad/SKILL.md) | `/techdrawai:cad` | Everything downstream of the drawing: DXF and DWG at true size, 3D reconstruction, and product renders. |
+| [`techdrawai-drafting`](./skills/techdrawai-drafting/SKILL.md) | `/techdrawai:drafting` | Photo or written description to dimensioned technical drawing. Drafting standard, sheet size, projection angle, drawing type, views, and the measurements that anchor the scale. |
+| [`techdrawai-cad`](./skills/techdrawai-cad/SKILL.md) | `/techdrawai:cad` | Everything downstream of the drawing: DXF and DWG at true size, printable STL, 3D reconstruction from a photo or a drawing, and product renders. |
 
 ## Tools
 
 | Tool | What it does | Cost |
 | --- | --- | --- |
-| `generate_technical_drawing` | Photo to a dimensioned, standards-compliant technical drawing | 3 credits |
+| `generate_technical_drawing` | Photo to a dimensioned, standards-compliant technical drawing | 5 credits |
+| `text_to_technical_drawing` | A written description with sizes to a dimensioned technical drawing, no photo | 5 credits |
 | `image_to_dxf` | Any image to real CAD contours as DXF, optionally DWG | Free |
-| `render_product` | Technical drawing to a photorealistic product render | 3 credits |
-| `photo_to_3d` | Photo to a textured 3D mesh, GLB plus FBX, OBJ, USDZ, STL | 3 credits |
+| `image_to_stl` | Flat artwork (logo, stencil, line drawing) extruded into a printable STL | Free |
+| `render_product` | Technical drawing to a photorealistic product render | 5 credits |
+| `photo_to_3d` | Photo to a textured 3D mesh, GLB plus FBX, OBJ, USDZ, STL | 80 credits |
+| `drawing_to_3d` | Technical drawing to a textured 3D mesh, one call and one charge | 80 credits |
 | `identify_product` | Name the object in a photo | Free |
 | `check_credits` | Balance, plan, and what each operation costs | Free |
 
@@ -114,7 +117,7 @@ Every tool writes its result to disk (`./techdrawai-output/` unless you pass `ou
   product_name: "steel wall bracket"
   measurements: [{ value: "120", unit: "mm", position: "overall width" }]
   standard: ISO · paper_size: A3 · drawing_type: working
-→ ./techdrawai-output/drawing-2026-07-27_15-04-11.png   3 credits
+→ ./techdrawai-output/drawing-2026-07-27_15-04-11.png   5 credits
 
 [image_to_dxf]  width_mm: 120
 → ./techdrawai-output/drawing-2026-07-27_15-04-11.dxf   34 contours, free

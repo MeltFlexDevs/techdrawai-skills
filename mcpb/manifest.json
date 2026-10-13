@@ -2,9 +2,9 @@
   "manifest_version": "0.2",
   "name": "techdrawai",
   "display_name": "TechDraw AI",
-  "version": "0.1.0",
-  "description": "Photo to technical drawing, CAD-ready DXF and DWG, 3D models and product renders.",
-  "long_description": "TechDraw AI turns a photograph of a physical part into engineering documentation, directly from Claude. Draft a dimensioned, standards-compliant 2D technical drawing (ISO or ANSI, first or third angle, working, assembly, as-fitted or patent), trace it into real CAD contours as DXF or DWG at true size, reconstruct the part as a textured 3D mesh, or render it as a finished product shot. Tools: generate_technical_drawing, image_to_dxf, render_product, photo_to_3d, identify_product and check_credits. Requires a TechDraw AI API key on the Studio plan; every generation is billed to your own account credits and refunded automatically on failure.",
+  "version": "0.4.0",
+  "description": "Photo or text to technical drawing, CAD-ready DXF and DWG, printable STL, 3D models and product renders.",
+  "long_description": "TechDraw AI turns a photograph of a physical part, or a written description of one, into engineering documentation, directly from Claude. Draft a dimensioned, standards-compliant 2D technical drawing (ISO or ANSI, first or third angle, working, assembly, as-fitted or patent), trace it into real CAD contours as DXF or DWG at true size, extrude artwork into a printable STL, reconstruct a part as a textured 3D mesh from a photo or a drawing, or render it as a finished product shot. Tools: generate_technical_drawing, text_to_technical_drawing, image_to_dxf, image_to_stl, render_product, photo_to_3d, drawing_to_3d, identify_product and check_credits. Requires a TechDraw AI API key on the Studio plan; every generation is billed to your own account credits and refunded automatically on failure.",
   "author": {
     "name": "TechDraw AI",
     "url": "https://github.com/MeltFlexDevs"
@@ -18,7 +18,9 @@
     "entry_point": "server/cli.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/server/cli.js"],
+      "args": [
+        "${__dirname}/server/cli.js"
+      ],
       "env": {
         "TECHDRAWAI_API_KEY": "${user_config.api_key}"
       }
@@ -27,19 +29,31 @@
   "tools": [
     {
       "name": "generate_technical_drawing",
-      "description": "Turn a product photo into a dimensioned 2D technical drawing with orthographic views, dimension lines and the projection symbol (3 credits)."
+      "description": "Turn a product photo into a dimensioned 2D technical drawing with orthographic views, dimension lines and the projection symbol (5 credits)."
+    },
+    {
+      "name": "text_to_technical_drawing",
+      "description": "Draw a part from a written description with its sizes, no photo. Stated numbers are drawn as given, anything left out is marked nominal (5 credits)."
     },
     {
       "name": "image_to_dxf",
       "description": "Trace any image into real CAD contours and write a DXF, optionally a DWG as well. Set width_mm for true size (free)."
     },
     {
+      "name": "image_to_stl",
+      "description": "Trace flat artwork such as a logo or stencil and extrude it into a watertight, printable STL (free)."
+    },
+    {
       "name": "render_product",
-      "description": "Reconstruct the object described by a technical drawing and render it as a photorealistic product shot (3 credits)."
+      "description": "Reconstruct the object described by a technical drawing and render it as a photorealistic product shot (5 credits)."
     },
     {
       "name": "photo_to_3d",
-      "description": "Reconstruct a textured 3D mesh from a photo of a single object, downloaded as GLB (3 credits)."
+      "description": "Reconstruct a textured 3D mesh from a photo of a single object, downloaded as GLB (80 credits)."
+    },
+    {
+      "name": "drawing_to_3d",
+      "description": "Turn a technical drawing into a textured 3D mesh in one call, rendered then reconstructed (80 credits)."
     },
     {
       "name": "identify_product",
@@ -69,7 +83,11 @@
     }
   },
   "compatibility": {
-    "platforms": ["darwin", "win32", "linux"],
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
     "runtimes": {
       "node": ">=18.0.0"
     }

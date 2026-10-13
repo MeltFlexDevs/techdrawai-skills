@@ -24,31 +24,72 @@ export function timestamp() {
         .slice(0, 19);
 }
 /**
- * Normalise any supported image input into a `data:image/…;base64,…` URL.
- * Accepts an existing data URL, an http(s) URL (fetched here), or a local file
- * path.
- *
- * Everything is converted client-side on purpose: the server would otherwise
- * have to fetch the caller's URL itself, and a local path — which is what an
- * agent or a shell almost always has — could not be sent at all.
+ * Largest image we may inline into a request body. Mirrors
+ * MAX_INLINE_IMAGE_BYTES in lib/api-constants.ts, and exists here so an
+ * oversized file is caught before it is uploaded: past this the platform
+ * rejects the body with a page the client cannot parse, and the user sees a
+ * bare "HTTP 413" instead of a sentence telling them what to do.
  */
-export async function toDataUrl(input) {
+export const MAX_INLINE_IMAGE_BYTES = Math.floor(3.25 * 1024 * 1024);
+/** How long to wait when downloading a source image or a finished asset. */
+const DOWNLOAD_TIMEOUT_MS = 60_000;
+/** Matches the server's formatting, so the same limit reads as the same number
+ *  whether it is caught here or reported by the API. */
+function mb(bytes) {
+    return `${(bytes / 1024 / 1024).toFixed(2).replace(/\.?0+$/, "")} MB`;
+}
+/**
+ * Turn any supported image input into the field the API should receive.
+ *
+ * A local file or a data URL is inlined. An http(s) URL is downloaded and
+ * inlined too — deliberately, because that is what makes a URL on a private
+ * network or a localhost dev server work at all, which the server could never
+ * fetch for itself.
+ *
+ * The one exception is size. When a downloaded image is too big to inline, the
+ * URL is handed to the server instead, which may fetch up to four times as
+ * much. That path only works for publicly reachable URLs, and the server says
+ * so plainly if it cannot get there.
+ */
+export async function toImageField(input) {
     const value = input.trim();
-    if (/^data:image\//i.test(value))
-        return value;
+    if (/^data:image\//i.test(value)) {
+        const bytes = Math.floor(((value.split(",")[1] ?? "").length * 3) / 4);
+        if (bytes > MAX_INLINE_IMAGE_BYTES) {
+            throw new Error(`That image is ${mb(bytes)}, over the ${mb(MAX_INLINE_IMAGE_BYTES)} limit for an inline image. Save it to a file and resize it, or host it and pass the URL instead.`);
+        }
+        return { image: value };
+    }
     if (/^https?:\/\//i.test(value)) {
-        const res = await fetch(value);
+        let res;
+        try {
+            res = await fetch(value, {
+                signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+            });
+        }
+        catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            throw new Error(`Could not fetch ${value}: ${message}`);
+        }
         if (!res.ok) {
             throw new Error(`Could not fetch ${value} (HTTP ${res.status})`);
         }
         const buffer = Buffer.from(await res.arrayBuffer());
+        // Too large to inline — let the server fetch it, which it is allowed to do
+        // at a much higher limit.
+        if (buffer.byteLength > MAX_INLINE_IMAGE_BYTES)
+            return { imageUrl: value };
         const mime = res.headers.get("content-type")?.split(";")[0] || "image/jpeg";
-        return `data:${mime};base64,${buffer.toString("base64")}`;
+        return { image: `data:${mime};base64,${buffer.toString("base64")}` };
     }
     // A local file path. readFileSync throws a clear ENOENT when it is wrong.
     const ext = value.split(".").pop()?.toLowerCase() ?? "png";
     const mime = EXT_MIME[ext] ?? "image/png";
-    return `data:${mime};base64,${readFileSync(value).toString("base64")}`;
+    const buffer = readFileSync(value);
+    if (buffer.byteLength > MAX_INLINE_IMAGE_BYTES) {
+        throw new Error(`${value} is ${mb(buffer.byteLength)}, over the ${mb(MAX_INLINE_IMAGE_BYTES)} limit for an inline image. Resize it, or host it and pass the URL instead — the server will fetch a URL up to 14 MB.`);
+    }
+    return { image: `data:${mime};base64,${buffer.toString("base64")}` };
 }
 /** Decode a `data:image/…;base64,…` URL into bytes plus a file extension. */
 export function dataUrlToBuffer(dataUrl) {
@@ -91,7 +132,18 @@ export function saveText(text, outputPath, prefix, ext) {
 }
 /** Download a hosted asset (GLB, FBX, …) to disk. Returns the path. */
 export async function downloadToFile(url, outputPath, prefix, ext) {
-    const res = await fetch(url);
+    let res;
+    try {
+        res = await fetch(url, {
+            // A mesh is tens of megabytes, so this is more generous than a source
+            // image — but never unbounded: a stalled download must not hang an agent.
+            signal: AbortSignal.timeout(3 * DOWNLOAD_TIMEOUT_MS),
+        });
+    }
+    catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        throw new Error(`Could not download ${url}: ${message}`);
+    }
     if (!res.ok) {
         throw new Error(`Could not download ${url} (HTTP ${res.status})`);
     }
