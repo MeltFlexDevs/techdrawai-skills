@@ -3,10 +3,19 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg)](./LICENSE)
 [![Version](https://img.shields.io/badge/version-0.4.0-3b82f6.svg)](./VERSION)
 [![Skills](https://img.shields.io/badge/skills-2-8b5cf6.svg)](#skills)
+[![Claude Code plugin](https://img.shields.io/badge/Claude%20Code%20plugin-0.5.0-d97706.svg)](./plugins/techdrawai/README.md)
 [![npm](https://img.shields.io/badge/npm-techdrawai--mcp-cb3837.svg)](https://www.npmjs.com/package/techdrawai-mcp)
 [![Website](https://img.shields.io/badge/techdrawai.com-f97316.svg)](https://techdrawai.com)
 
 AI agent skills for **turning a photograph of a physical part into engineering documentation** with TechDraw AI. Draft a dimensioned 2D technical drawing, trace it into CAD-ready DXF and DWG, reconstruct the part as a 3D mesh, or render it as a finished product shot. Works with Claude Code, Claude Desktop, Cursor, Codex, VS Code, Windsurf and anything else that loads Markdown skills or speaks MCP.
+
+## New: exact CAD parts, and Claude without an API key
+
+- **`text_to_cad`** models a part as **exact, editable CAD**. You get a STEP for Fusion 360, SolidWorks, FreeCAD or Onshape, and an STL for printing. It works from a written description, a dimensioned sketch or a photo. TechDraw AI's CAD agent writes and runs build123d (OpenCascade) code, measures the solid and checks it against the request. You can keep changing the same part, from Claude or at [techdrawai.com/app/ai-cad](https://techdrawai.com/app/ai-cad).
+- **Claude Code plugin.** Install with `/plugin marketplace add MeltFlexDevs/techdrawai-skills` and then `/plugin install techdrawai@techdrawai`. You sign in in the browser, with no API key. The plugin includes `text_to_cad` and three skills. See [plugins/techdrawai](./plugins/techdrawai/README.md).
+- **Claude on the web, Desktop and mobile.** Add `https://techdrawai.com/api/mcp/claude` as a custom connector, under Customize → Connectors → Add custom connector. A file picker card uploads your photos, and results show as cards with downloads.
+
+The rest of this README covers the npm server and the skills for other agents (Cursor, Codex, VS Code, Windsurf, Claude Desktop with a local server). Those agents use an API key and write results to disk.
 
 Each user authenticates with their **own** TechDraw AI API key, and every generation is billed to their account credits. The skills call the public [TechDraw AI API](https://techdrawai.com/api) directly, so there is nothing extra to install and no CAD kernel to build.
 
