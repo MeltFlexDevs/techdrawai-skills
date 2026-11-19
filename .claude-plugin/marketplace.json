@@ -12,9 +12,16 @@
       "name": "techdrawai",
       "source": "./plugins/techdrawai",
       "description": "Model exact CAD parts (STEP, STL) from a description or a sketch, draft dimensioned technical drawings from a photo or text, and turn drawings into DXF, DWG, printable STL and 3D models.",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "category": "design",
-      "keywords": ["cad", "step", "stl", "dxf", "technical-drawing", "3d-printing"]
+      "keywords": [
+        "cad",
+        "step",
+        "stl",
+        "dxf",
+        "technical-drawing",
+        "3d-printing"
+      ]
     }
   ]
 }

@@ -7,7 +7,7 @@ description: Turn drawings, sketches, logos and photos into CAD and print files 
 
 These tools work on what is already drawn or photographed. For a drawing, use the `drafting` skill first. For an exact part modelled from sizes, use the `cad-part` skill (`text_to_cad`).
 
-Inputs are image URLs. A local file goes in through `upload_file` and the curl command it returns, as the other skills describe. Any earlier TechDraw AI result can be passed straight on.
+Inputs are image URLs. A local file goes in through `upload_file` and its curl command where there is a shell, or through `upload_photo`'s file picker in a chat, as the other skills describe. Any earlier TechDraw AI result can be passed straight on.
 
 ## The tools
 
@@ -22,7 +22,7 @@ Inputs are image URLs. A local file goes in through `upload_file` and the curl c
 - **`drawing_to_3d`** (80 credits, Studio plan) builds a textured mesh from a technical drawing.
   - It follows the drawing's proportions, not its exact dimensions. Say so before anyone machines from it. If exact dimensions matter, use `text_to_cad` instead.
 - **`check_job`** (free) reports on a 3D job: still building, or the finished files.
-  - Both 3D tools return a `job_id`. Call `check_job` every 30 seconds until the files are ready, usually one to four minutes.
+  - Both 3D tools return a `job_id`. In Claude's apps the card polls by itself. Elsewhere, call `check_job` every 30 seconds until the files are ready, usually one to four minutes.
 - **`get_credits`** (free) shows the balance, the plan and what each operation costs. Call it before a batch.
 
 ## How to work
@@ -33,6 +33,6 @@ Inputs are image URLs. A local file goes in through `upload_file` and the curl c
    - Printing artwork wants `image_to_stl`.
    - Printing a real object wants `text_to_cad` (exact) or `photo_to_3d` (a look-alike).
 2. **A trace with almost no contours, or one big blob, means the cut-off is wrong.** Set `threshold` to a number between 100 and 180. Use `invert: true` for light lines on a dark background. A noisy outline cleans up with `smoothing: 2` or `3`.
-3. **Save the results where the user works:** `curl -sSL -o part.dxf "<url>"`. Report the file names and the credits used.
+3. **With a shell, save the results where the user works:** `curl -sSL -o part.dxf "<url>"`. Report the file names and the credits used.
 4. **Failures are refunded automatically.** Say that, rather than leaving the user wondering.
 5. **No Studio plan, or out of credits:** the tool says so and charges nothing. Tell the user, name the account, and point at <https://techdrawai.com/app/subscription>. Do not retry.

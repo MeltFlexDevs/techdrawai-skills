@@ -14,16 +14,16 @@ It costs **80 credits** and needs the TechDraw AI **Studio** plan. If nothing ge
 1. **Collect every size the user gave, across all their messages, into one prompt.** Give each one as a number in mm with what it measures: "L bracket, legs 60 and 40 mm, 30 wide, 4 thick, 3 mm inside bend radius, two Ø5 through-holes per leg centred on the width." The agent chooses sensible values for anything left open and says which. If a size that decides whether the part fits is missing (a bore for a bearing, a hole pattern that must match something), ask for it first.
 2. **Say what the part is for** when the user told you: "mounts a NEMA 17 motor", "prints in PETG", "machined from 6 mm aluminium". The agent designs for it.
 3. **A sketch or drawing makes the best input.** Sizes written on it are used exactly. A photo needs one known size to scale from. Pass up to three images in `images`.
-   - Images are URLs, not file paths. For a local file, call `upload_file` once and run the curl command it returns for each file. The command prints `{"url": ...}`, and that URL goes in `images`.
-   - Shrink anything over 4 MB first: `sips -Z 2048 in.jpg --out small.jpg` on macOS, or `magick in.jpg -resize 2048x2048 small.jpg`.
+   - Images are URLs, not file paths. **With a shell** (Claude Code, Cowork): call `upload_file` once and run the curl command it returns for each file. The command prints `{"url": ...}`, and that URL goes in `images`. Shrink anything over 4 MB first: `sips -Z 2048 in.jpg --out small.jpg` on macOS, or `magick in.jpg -resize 2048x2048 small.jpg`.
+   - **In a chat with no shell** (Claude on the web, Desktop or mobile): call `upload_photo`. It shows a file picker, and the uploaded file's URL arrives in the chat.
 
 ## While it runs
 
-`text_to_cad` returns a `job_id` and a `project_id` at once. A part takes from under a minute to about eight minutes. Call `check_job` with the `job_id` every 30 seconds, and tell the user it is modelling rather than leaving them watching a silent prompt. Polling is free.
+`text_to_cad` returns a `job_id` and a `project_id` at once. A part takes from under a minute to about eight minutes. In Claude's apps a card shows the progress and finishes by itself. Where there is no card, call `check_job` with the `job_id` every 30 seconds, and tell the user it is modelling rather than leaving them watching a silent prompt. Polling is free.
 
 ## When it finishes
 
-- **Files.** `check_job` returns STEP and STL links. They are permanent and do not need a sign-in to download. When the user is working in a project, save the files there:
+- **Files.** `check_job` returns STEP and STL links. They are permanent and do not need a sign-in to download. When the user is working in a project and you have a shell, save the files there:
   ```bash
   curl -sSL -o bracket.step "<step url>"
   curl -sSL -o bracket.stl  "<stl url>"

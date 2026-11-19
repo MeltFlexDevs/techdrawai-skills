@@ -1,6 +1,6 @@
-# TechDraw AI for Claude Code
+# TechDraw AI for Claude
 
-Model exact CAD parts, draft technical drawings and make CAD and print files from Claude Code. Everything runs on TechDraw AI's servers under your own TechDraw AI account, so there is no CAD kernel to install, no API key to copy, and nothing runs on your machine but `curl`.
+Model exact CAD parts, draft technical drawings and make CAD and print files, from Claude Code, Cowork or the Claude apps. Everything runs on TechDraw AI's servers under your own TechDraw AI account. There is no CAD kernel to install and no API key to copy.
 
 ## Install
 
@@ -42,7 +42,8 @@ Claude picks the right skill from your request. The slash commands are there if 
 | `check_job` | Progress and files of a 3D or CAD job | free |
 | `identify_product` | Name the object in a photo | free |
 | `get_credits` | Balance, plan and costs | free |
-| `upload_file` | Upload link for a local image (used with `curl`) | free |
+| `upload_file` | Upload link for a local image (used with `curl` where there is a shell) | free |
+| `upload_photo` | File picker card for a photo or drawing (in Claude's apps) | free |
 
 Generations that fail, or build nothing, are refunded automatically. Plans: <https://techdrawai.com/app/subscription>.
 

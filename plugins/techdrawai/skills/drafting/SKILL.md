@@ -12,13 +12,12 @@ Two tools make the drawing, and each costs **5 credits**:
 
 `identify_product` names the object in a photo, for free. The name improves the title block and the size estimates, so use it when you do not know what the object is.
 
-## Getting a local photo in
+## Getting a photo in
 
-Tools take image URLs, not file paths. For a file on this machine:
+Tools take image URLs, not file paths.
 
-1. Call `upload_file` once. It returns a curl command with a 30-minute link.
-2. Run that command for each file. It prints `{"url": ...}`, and that URL is the `image`.
-3. Shrink anything over 4 MB first: `sips -Z 2048 in.jpg --out small.jpg` on macOS, or `magick in.jpg -resize 2048x2048 small.jpg`.
+- **With a shell (Claude Code, Cowork):** call `upload_file` once. It returns a curl command with a 30-minute link. Run that command for each file. It prints `{"url": ...}`, and that URL is the `image`. Shrink anything over 4 MB first: `sips -Z 2048 in.jpg --out small.jpg` on macOS, or `magick in.jpg -resize 2048x2048 small.jpg`.
+- **In a chat with no shell (Claude on the web, Desktop or mobile):** call `upload_photo`. It shows a file picker, and the uploaded file's URL arrives in the chat.
 
 A public https image link, or any earlier TechDraw AI result, works as `image` directly.
 
@@ -51,7 +50,7 @@ For `text_to_technical_drawing`, put every size the user gave, across all their 
 
 ## After the drawing
 
-- The result is a PNG link. When the user works in a project, save it: `curl -sSL -o bracket-drawing.png "<url>"`.
+- The result is a PNG link. In Claude's apps it shows as a card with downloads. When the user works in a project with a shell, save it: `curl -sSL -o bracket-drawing.png "<url>"`.
 - **Offer the DXF.** A PNG is a picture of a drawing, and the DXF is the drawing. Pass the drawing's URL to `image_to_dxf` with `width_mm` set from the user's measurement. The `cad` skill covers that step.
 - **When they need the part itself in CAD rather than a drawing of it,** `text_to_cad` models it exactly as STEP and STL. The `cad-part` skill covers that.
 - Report the credits used. Failed generations are refunded automatically, so say so if one fails.
