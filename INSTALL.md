@@ -23,14 +23,14 @@ Detects your agent and installs into the right place.
 gh skill install MeltFlexDevs/techdrawai-skills
 ```
 
-### Claude Code marketplace
+### Claude Code plugin
 
 ```
 /plugin marketplace add MeltFlexDevs/techdrawai-skills
 /plugin install techdrawai@techdrawai
 ```
 
-Then `/techdrawai:drafting` or `/techdrawai:cad`.
+This installs [plugins/techdrawai](./plugins/techdrawai/README.md): the hosted TechDraw AI server (OAuth sign-in in the browser on first use, no API key) and three skills, `/techdrawai:cad-part` (exact STEP/STL parts), `/techdrawai:drafting` and `/techdrawai:cad`. Use it instead of the npm server in Claude Code; the two expose the same tool names, so do not add both.
 
 ### By hand
 

@@ -5,7 +5,8 @@
 | Path | What it is |
 | --- | --- |
 | `skills/` | The agent skills. Markdown with YAML frontmatter. |
-| `.claude-plugin/` | Claude Code plugin and marketplace manifests. |
+| `.claude-plugin/` | Claude Code marketplace manifest. |
+| `plugins/techdrawai/` | The Claude Code plugin: hosted server (`.mcp.json`) and its skills. |
 | `mcpb/` | The Claude Desktop extension: a manifest plus a self-contained copy of the built server. |
 | `server.json` | The MCP registry entry. |
 | `setup` | Universal install script. |

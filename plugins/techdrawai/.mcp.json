@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "techdrawai": {
+      "type": "http",
+      "url": "https://techdrawai.com/api/mcp/code"
+    }
+  }
+}

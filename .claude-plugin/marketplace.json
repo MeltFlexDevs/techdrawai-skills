@@ -4,24 +4,17 @@
     "name": "TechDraw AI",
     "url": "https://techdrawai.com"
   },
+  "metadata": {
+    "description": "TechDraw AI for Claude Code: exact CAD parts (STEP, STL), technical drawings, DXF/DWG, printable STL and 3D models."
+  },
   "plugins": [
     {
       "name": "techdrawai",
-      "source": "./",
-      "description": "Photo or text to technical drawing, CAD-ready DXF and DWG, printable STL, 3D models and product renders.",
-      "version": "0.4.0",
-      "skills": [
-        {
-          "name": "drafting",
-          "path": "skills/techdrawai-drafting/SKILL.md",
-          "invoke": "/techdrawai:drafting"
-        },
-        {
-          "name": "cad",
-          "path": "skills/techdrawai-cad/SKILL.md",
-          "invoke": "/techdrawai:cad"
-        }
-      ]
+      "source": "./plugins/techdrawai",
+      "description": "Model exact CAD parts (STEP, STL) from a description or a sketch, draft dimensioned technical drawings from a photo or text, and turn drawings into DXF, DWG, printable STL and 3D models.",
+      "version": "0.5.0",
+      "category": "design",
+      "keywords": ["cad", "step", "stl", "dxf", "technical-drawing", "3d-printing"]
     }
   ]
 }

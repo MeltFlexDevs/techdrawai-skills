@@ -34,7 +34,7 @@ npx skills add MeltFlexDevs/techdrawai-skills
 gh skill install MeltFlexDevs/techdrawai-skills
 ```
 
-### Claude Code marketplace
+### Claude Code plugin (recommended for Claude Code)
 
 Inside Claude Code:
 
@@ -42,6 +42,8 @@ Inside Claude Code:
 /plugin marketplace add MeltFlexDevs/techdrawai-skills
 /plugin install techdrawai@techdrawai
 ```
+
+The plugin brings its own server and skills, and signs in to your TechDraw AI account with OAuth: no API key and no Studio plan needed for drawings. It adds `text_to_cad`, which models an exact part as **STEP and STL** from a description, a dimensioned sketch or a photo. See [plugins/techdrawai](./plugins/techdrawai/README.md).
 
 ### MCP server only
 
