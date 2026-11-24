@@ -30,23 +30,27 @@ Any raster image becomes real CAD vector contours in a DXF file. **Free.**
 
 The DXF is ASCII R2000 and opens in AutoCAD, Fusion 360, SolidWorks, Onshape, FreeCAD, LibreCAD, Rhino, Inkscape and the common laser and CNC tools such as LightBurn.
 
-### `photo_to_3d`
-A photo of one object becomes a textured 3D mesh. **80 credits, Studio plan**: a reconstruction runs for minutes on a GPU, so it is not priced like a drawing. Takes one to three minutes and the call blocks until the mesh is ready, so tell the user it is running rather than leaving them watching a stalled prompt.
+### `text_to_cad`
+AI CAD: a description, optionally with up to three photos or sketches, becomes an exact, editable CAD part: a STEP for CAD programs, an STL for printing and a 3MF for slicers. **80 credits, Studio plan**, refunded if nothing is built. Starts a job (two to eight minutes) and returns a `job_id` and a `project_id`.
 
-- `image` (required): a clear JPG or PNG of a **single** object.
-- `detail`: `draft` (12k triangles), `standard` (40k, default), `high` (80k).
-- `textured`: defaults to true. Turn it off when the user only wants geometry.
-- `output_path`: the GLB lands here; FBX, OBJ, USDZ and STL links are reported too.
+- `prompt` (required): what the part is and every size, in mm.
+- `images`: up to three photos, sketches or drawings; sizes written on them are used exactly.
+- `project_id`: change a part made before ("make the wall 6 mm").
 
 ### `drawing_to_3d`
-A technical drawing becomes a textured 3D mesh. **80 credits**, the same as from a photo, one to three minutes. The server renders the object the views describe and reconstructs that render, in one call and one charge.
+A technical drawing or dimensioned sketch becomes the same exact CAD part, with the dimensions on the sheet used as written. **80 credits, Studio plan**, refunded if nothing is built. `notes` carries anything the sheet leaves out. Returns a `job_id`.
 
-- `image` (required): the drawing, JPG, PNG or WebP.
-- `product_name`: what it depicts.
-- `style`: `clay` gives the cleanest geometry, `photoreal` (default) keeps colour and material.
-- `detail`, `textured`, `output_path`: as `photo_to_3d`.
+### `cad_to_drawing`
+A finished CAD part (its `project_id`) becomes a dimensioned technical drawing made from the exact model, ISO A3. **5 credits, Studio plan**, one to two minutes.
 
-Never chain `render_product` into `photo_to_3d` to do this by hand: same work, the render paid on top. The mesh follows the drawing's proportions, not its dimensions, so say so before anyone machines from it.
+### `photo_to_3d`
+A photo of one real object becomes a textured 3D mesh: GLB, STL, OBJ, FBX and USDZ. **80 credits, Studio plan**, refunded if it fails. It follows the photo's shape and colours, not exact dimensions, so it suits furniture, products and AR, not a part to machine. Returns a `job_id` (one to five minutes).
+
+- `image` (required): a clear photo of a **single** object.
+- `detail`: `draft`, `standard` (default) or `high`. `textured`: defaults to true.
+
+### `check_job`
+Poll a `job_id` about every 30 seconds. When the job is done the files are saved to `./techdrawai-output/` (or `output_dir`) and their paths returned. If the CAD agent needs answers first, nothing was charged: ask the user and call `text_to_cad` with the answers and the `project_id`. **Free.**
 
 ### `image_to_stl`
 Flat artwork becomes a solid, watertight STL to slice and print. **Free.** The same trace as `image_to_dxf`, extruded: a logo, stencil, sign or line drawing given a thickness. A photograph of an object comes out as its outline in relief, not the object; use `photo_to_3d` for that.

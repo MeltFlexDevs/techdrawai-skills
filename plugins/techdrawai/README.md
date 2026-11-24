@@ -32,13 +32,14 @@ Claude picks the right skill from your request. The slash commands are there if 
 
 | Tool | What it does | Credits |
 | --- | --- | --- |
-| `text_to_cad` | Description, sketch or photo → exact CAD part (STEP + STL) | 80, Studio plan |
+| `text_to_cad` | Description, sketch or photo → exact CAD part (STEP, STL, 3MF) | 80, Studio plan |
 | `generate_technical_drawing` | Photo → dimensioned technical drawing | 5 |
 | `text_to_technical_drawing` | Description → dimensioned technical drawing | 5 |
 | `image_to_dxf` | Image → DXF and DWG contours | free |
 | `image_to_stl` | Flat artwork → printable STL | free |
-| `photo_to_3d` | Photo → textured 3D model (GLB + STL) | 80, Studio plan |
-| `drawing_to_3d` | Technical drawing → textured 3D model | 80, Studio plan |
+| `drawing_to_3d` | Technical drawing or sketch → exact CAD part (STEP, STL, 3MF) | 80, Studio plan |
+| `cad_to_drawing` | CAD part → dimensioned technical drawing | 5, Studio plan |
+| `photo_to_3d` | Photo → textured 3D model (GLB, STL, OBJ, FBX, USDZ) | 80, Studio plan |
 | `check_job` | Progress and files of a 3D or CAD job | free |
 | `identify_product` | Name the object in a photo | free |
 | `get_credits` | Balance, plan and costs | free |

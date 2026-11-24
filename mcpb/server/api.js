@@ -10,8 +10,10 @@ const DEFAULT_TIMEOUT_MS = 60_000;
 const GENERATION_TIMEOUT_MS = 150_000;
 /** The server gives the image call 150 s and still has to answer after it. */
 const TEXT_DRAWING_TIMEOUT_MS = 200_000;
-/** Server maxDuration 300s: 3D reconstruction genuinely takes minutes. */
-const MODEL_3D_TIMEOUT_MS = 330_000;
+/** Starting a 3D or CAD job reads the images and charges; the work itself is polled. */
+const JOB_START_TIMEOUT_MS = 90_000;
+/** The CAD part drawing renders the model and drafts it: server maxDuration 300s. */
+const CAD_DRAWING_TIMEOUT_MS = 330_000;
 /** Thrown for every non-OK reply, carrying the server's machine-readable code. */
 export class ApiError extends Error {
     code;
@@ -102,29 +104,54 @@ export class TechDrawAiClient {
             timeoutMs: GENERATION_TIMEOUT_MS,
         });
     }
-    /** Product photo → 3D mesh. Studio plan only. */
+    /**
+     * AI CAD: a description (and up to three images) → an exact CAD part. Starts a
+     * job and answers at once; poll `job()`. Studio plan only.
+     */
+    async aiCad(params) {
+        const images = params.images?.length
+            ? await Promise.all(params.images.map(async (input) => {
+                const field = await toImageField(input);
+                return "imageUrl" in field ? field.imageUrl : field.image;
+            }))
+            : undefined;
+        return this.request("/api/v1/ai-cad", {
+            method: "POST",
+            body: { prompt: params.prompt, ...(images ? { images } : {}), ...(params.projectId ? { projectId: params.projectId } : {}) },
+            timeoutMs: JOB_START_TIMEOUT_MS,
+        });
+    }
+    /** Technical drawing → exact CAD part (AI CAD). Starts a job; poll `job()`. Studio plan only. */
+    async drawingTo3d(params) {
+        const { image, notes } = params;
+        return this.request("/api/v1/drawing-to-3d", {
+            method: "POST",
+            body: { ...(await toImageField(image)), ...(notes ? { notes } : {}) },
+            timeoutMs: JOB_START_TIMEOUT_MS,
+        });
+    }
+    /** A dimensioned technical drawing of an AI CAD part. Studio plan only. */
+    async cadDrawing(projectId) {
+        return this.request(`/api/v1/ai-cad/${encodeURIComponent(projectId)}/drawing`, {
+            method: "POST",
+            body: {},
+            timeoutMs: CAD_DRAWING_TIMEOUT_MS,
+        });
+    }
+    /** Product photo → textured 3D mesh (Meshy). Starts a job; poll `job()`. Studio plan only. */
     async model3d(params) {
         const { image, ...rest } = params;
         return this.request("/api/v1/model-3d", {
             method: "POST",
-            body: { ...(await toImageField(image)), ...rest },
-            timeoutMs: MODEL_3D_TIMEOUT_MS,
+            body: { ...(await toImageField(image)), ...rest, async: true },
+            timeoutMs: JOB_START_TIMEOUT_MS,
         });
     }
-    /**
-     * Technical drawing → 3D mesh, as one call and one charge. Studio plan only.
-     *
-     * The server renders the drawing and reconstructs that render. Chaining
-     * `render()` and `model3d()` by hand does the same work and pays for the
-     * render on top, because here the render is a step of the reconstruction
-     * rather than a second purchase.
-     */
-    async drawingTo3d(params) {
-        const { image, ...rest } = params;
-        return this.request("/api/v1/drawing-to-3d", {
-            method: "POST",
-            body: { ...(await toImageField(image)), ...rest },
-            timeoutMs: MODEL_3D_TIMEOUT_MS,
+    /** Where a 3D or CAD job stands. Free. */
+    async job(jobId) {
+        return this.request(`/api/v1/jobs/${encodeURIComponent(jobId)}`, {
+            method: "GET",
+            timeoutMs: 150_000,
         });
     }
     /** Raster image → DXF (optionally DWG too). Free. */

@@ -1,7 +1,7 @@
 # TechDraw AI Skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.0-3b82f6.svg)](./VERSION)
+[![Version](https://img.shields.io/badge/version-0.5.0-3b82f6.svg)](./VERSION)
 [![Skills](https://img.shields.io/badge/skills-2-8b5cf6.svg)](#skills)
 [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code%20plugin-0.5.0-d97706.svg)](./plugins/techdrawai/README.md)
 [![npm](https://img.shields.io/badge/npm-techdrawai--mcp-cb3837.svg)](https://www.npmjs.com/package/techdrawai-mcp)
@@ -108,8 +108,11 @@ The key is shown exactly once at creation. Only its SHA-256 is stored, so nobody
 | `image_to_dxf` | Any image to real CAD contours as DXF, optionally DWG | Free |
 | `image_to_stl` | Flat artwork (logo, stencil, line drawing) extruded into a printable STL | Free |
 | `render_product` | Technical drawing to a photorealistic product render | 5 credits |
-| `photo_to_3d` | Photo to a textured 3D mesh, GLB plus FBX, OBJ, USDZ, STL | 80 credits |
-| `drawing_to_3d` | Technical drawing to a textured 3D mesh, one call and one charge | 80 credits |
+| `text_to_cad` | AI CAD: description (+ up to 3 photos or sketches) to an exact CAD part, STEP, STL, 3MF | 80 credits |
+| `drawing_to_3d` | Technical drawing or sketch to an exact CAD part, STEP, STL, 3MF | 80 credits |
+| `cad_to_drawing` | CAD part to a dimensioned technical drawing | 5 credits |
+| `photo_to_3d` | Photo to a textured 3D mesh, GLB, STL, OBJ, FBX, USDZ | 80 credits |
+| `check_job` | Progress of a 3D or CAD job; saves the files when it is done | free |
 | `identify_product` | Name the object in a photo | Free |
 | `check_credits` | Balance, plan, and what each operation costs | Free |
 

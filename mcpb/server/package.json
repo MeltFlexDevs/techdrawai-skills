@@ -1,9 +1,9 @@
 {
   "name": "techdrawai-mcpb-server",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
-  "description": "Bundled TechDraw AI MCP server for the Claude Desktop Extension (MCPB).",
+  "description": "TechDraw AI: turn a product photo or a description into a dimensioned technical drawing, CAD-ready DXF or DWG, an exact AI CAD part (STEP, STL, 3MF), a textured 3D model or a photoreal render, from your terminal or your AI agent. MCP server and CLI.",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

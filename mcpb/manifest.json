@@ -2,9 +2,9 @@
   "manifest_version": "0.2",
   "name": "techdrawai",
   "display_name": "TechDraw AI",
-  "version": "0.4.0",
-  "description": "Photo or text to technical drawing, CAD-ready DXF and DWG, printable STL, 3D models and product renders.",
-  "long_description": "TechDraw AI turns a photograph of a physical part, or a written description of one, into engineering documentation, directly from Claude. Draft a dimensioned, standards-compliant 2D technical drawing (ISO or ANSI, first or third angle, working, assembly, as-fitted or patent), trace it into real CAD contours as DXF or DWG at true size, extrude artwork into a printable STL, reconstruct a part as a textured 3D mesh from a photo or a drawing, or render it as a finished product shot. Tools: generate_technical_drawing, text_to_technical_drawing, image_to_dxf, image_to_stl, render_product, photo_to_3d, drawing_to_3d, identify_product and check_credits. Requires a TechDraw AI API key on the Studio plan; every generation is billed to your own account credits and refunded automatically on failure.",
+  "version": "0.5.0",
+  "description": "Photo or text to technical drawing, CAD-ready DXF and DWG, printable STL, exact AI CAD parts (STEP), 3D models and product renders.",
+  "long_description": "TechDraw AI turns a photograph of a physical part, or a written description of one, into engineering documentation, directly from Claude. Draft a dimensioned, standards-compliant 2D technical drawing (ISO or ANSI, first or third angle, working, assembly, as-fitted or patent), trace it into real CAD contours as DXF or DWG at true size, extrude artwork into a printable STL, model an exact, editable CAD part (STEP, STL, 3MF) from a description or a drawing and draw it as a dimensioned sheet, reconstruct a photographed object as a textured 3D mesh, or render it as a finished product shot. Tools: generate_technical_drawing, text_to_technical_drawing, image_to_dxf, image_to_stl, render_product, text_to_cad, drawing_to_3d, cad_to_drawing, photo_to_3d, check_job, identify_product and check_credits. Requires a TechDraw AI API key on the Studio plan; every generation is billed to your own account credits and refunded automatically on failure.",
   "author": {
     "name": "TechDraw AI",
     "url": "https://github.com/MeltFlexDevs"
@@ -48,12 +48,24 @@
       "description": "Reconstruct the object described by a technical drawing and render it as a photorealistic product shot (5 credits)."
     },
     {
-      "name": "photo_to_3d",
-      "description": "Reconstruct a textured 3D mesh from a photo of a single object, downloaded as GLB (80 credits)."
+      "name": "text_to_cad",
+      "description": "AI CAD: model an exact, editable part from a description (and up to three photos or sketches) as STEP, STL and 3MF. Starts a job for check_job (80 credits)."
     },
     {
       "name": "drawing_to_3d",
-      "description": "Turn a technical drawing into a textured 3D mesh in one call, rendered then reconstructed (80 credits)."
+      "description": "Model the part a technical drawing or dimensioned sketch describes as exact CAD (STEP, STL, 3MF), its dimensions used as written. Starts a job (80 credits)."
+    },
+    {
+      "name": "cad_to_drawing",
+      "description": "Draw a finished AI CAD part as a dimensioned technical drawing made from the exact model (5 credits)."
+    },
+    {
+      "name": "photo_to_3d",
+      "description": "Reconstruct a textured 3D mesh (GLB, STL, OBJ, FBX, USDZ) from a photo of one object. Starts a job (80 credits)."
+    },
+    {
+      "name": "check_job",
+      "description": "Check a 3D or CAD job and save its files to disk when it is done (free)."
     },
     {
       "name": "identify_product",

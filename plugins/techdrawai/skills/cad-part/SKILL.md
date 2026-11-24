@@ -39,7 +39,8 @@ It costs **80 credits** and needs the TechDraw AI **Studio** plan. If nothing ge
 | --- | --- | --- |
 | Sizes, a sketch or a drawing | An exact part to make or edit in CAD | `text_to_cad` |
 | A photo of an object | A textured 3D look-alike (GLB) | `photo_to_3d` |
-| A technical drawing | A quick textured mesh | `drawing_to_3d` |
+| A technical drawing or dimensioned sketch | The exact part it describes | `drawing_to_3d` (same agent and files as `text_to_cad`) |
+| A CAD part already made | Its dimensioned technical drawing | `cad_to_drawing` with the `project_id` (5 credits) |
 | Flat artwork, a logo | Something to print | `image_to_stl` (free) |
 
 If the user has no Studio plan, the tool says so and charges nothing. Tell them, name the account, and point at <https://techdrawai.com/app/subscription>. Do not retry.

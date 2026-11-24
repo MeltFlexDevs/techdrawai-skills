@@ -18,7 +18,7 @@
 
 ## What gets installed
 
-Two skills, `techdrawai-drafting` and `techdrawai-cad`, plus an MCP server exposing nine tools: `generate_technical_drawing`, `text_to_technical_drawing`, `image_to_dxf`, `image_to_stl`, `render_product`, `photo_to_3d`, `drawing_to_3d`, `identify_product` and `check_credits`.
+Two skills, `techdrawai-drafting` and `techdrawai-cad`, plus an MCP server exposing twelve tools: `generate_technical_drawing`, `text_to_technical_drawing`, `image_to_dxf`, `image_to_stl`, `render_product`, `text_to_cad`, `drawing_to_3d`, `cad_to_drawing`, `photo_to_3d`, `check_job`, `identify_product` and `check_credits`.
 
 ## After it is set up
 

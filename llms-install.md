@@ -42,8 +42,11 @@ Ask the server for the account's balance by calling the `check_credits` tool. It
 | `image_to_dxf` | free |
 | `image_to_stl` | free |
 | `render_product` | 5 credits |
-| `photo_to_3d` | 80 credits |
+| `text_to_cad` | 80 credits |
 | `drawing_to_3d` | 80 credits |
+| `cad_to_drawing` | 5 credits |
+| `photo_to_3d` | 80 credits |
+| `check_job` | free |
 | `identify_product` | free |
 | `check_credits` | free |
 

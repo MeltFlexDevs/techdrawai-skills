@@ -1,7 +1,7 @@
 {
   "name": "techdrawai",
   "displayName": "TechDraw AI",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Model exact CAD parts (STEP, STL) from a description or a sketch, draft dimensioned technical drawings from a photo or text, and turn drawings into DXF, DWG, printable STL and 3D models. Connects to your TechDraw AI account with OAuth.",
   "author": {
     "name": "TechDraw AI",

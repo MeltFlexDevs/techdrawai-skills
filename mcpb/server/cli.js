@@ -4,8 +4,9 @@ import { createServer, VERSION } from "./server.js";
 import { ApiError, TechDrawAiClient, } from "./api.js";
 import { clearApiKey, loadConfig, saveApiKey, CONFIG_PATH, DEFAULT_BASE_URL, KEY_PREFIX, DRAWING_COST, MODEL_3D_COST, } from "./config.js";
 import { loginViaBrowser } from "./auth-login.js";
-import { downloadToFile, saveBuffer, saveImage, saveText, withExtension, } from "./util.js";
-const USAGE = `TechDraw AI — photo to technical drawing, CAD geometry, 3D model or render.
+import { describeSaved, saveJobFiles, waitForJob } from "./jobs.js";
+import { saveBuffer, saveImage, saveText, withExtension, } from "./util.js";
+const USAGE = `TechDraw AI — photo to technical drawing, CAD geometry, AI CAD parts, 3D models or renders.
 
 Usage:
   techdrawai                        Start the MCP server over stdio (used by AI agents)
@@ -19,8 +20,11 @@ Usage:
   techdrawai render [options]       Technical drawing -> photoreal render (${DRAWING_COST} credits)
   techdrawai dxf [options]          Image -> DXF (and DWG) CAD geometry (free)
   techdrawai stl [options]          Image -> 3D printable STL, extruded (free)
-  techdrawai model3d [options]      Photo -> 3D mesh, GLB (${MODEL_3D_COST} credits, Studio plan)
-  techdrawai drawing3d [options]    Drawing -> 3D mesh, GLB (${MODEL_3D_COST} credits, Studio plan)
+  techdrawai cad "<part>" [opts]    AI CAD: description -> exact CAD part, STEP/STL/3MF (${MODEL_3D_COST} credits, Studio)
+  techdrawai drawing3d [options]    Drawing or sketch -> exact CAD part, STEP/STL/3MF (${MODEL_3D_COST} credits, Studio)
+  techdrawai cad-drawing <project>  AI CAD part -> dimensioned technical drawing (${DRAWING_COST} credits, Studio)
+  techdrawai model3d [options]      Photo -> textured 3D mesh, GLB/STL/OBJ/FBX/USDZ (${MODEL_3D_COST} credits, Studio)
+  techdrawai job <jobId>            Check a 3D or CAD job and save its files (free)
   techdrawai identify -i <image>    Name the object in a photo (free)
 
 draw options:
@@ -75,20 +79,26 @@ stl options:
       --min-feature-mm <number>     Drop detail finer than this (default 0.3)
   -o, --out <path>                  Where to save the .stl (default ./techdrawai-output/)
 
-model3d options:
-  -i, --image <path|url>            Product photo, JPG or PNG                       [required]
-  -d, --detail <draft|standard|high>  Mesh density (default standard)
-      --no-texture                  Skip colour textures
-  -o, --out <path>                  Where to save the .glb (default ./techdrawai-output/)
+cad options (waits for the part, usually 2-8 minutes, then saves every file):
+  "<part>"                          What the part is and every size, in quotes      [required]
+  -i, --image <path|url>            A photo, sketch or drawing of it (repeat, up to 3)
+      --project <id>                Change a part made before instead of a new one
+  -o, --out <dir>                   Folder for the files (default ./techdrawai-output/)
 
 drawing3d options:
-  -i, --image <path|url>            Technical drawing, JPG, PNG or WebP             [required]
-  -n, --name <text>                 What the drawing depicts, e.g. "wall bracket"
-      --style <photoreal|studio|clay|lifestyle>  The render it is built from
-                                    (default photoreal; clay gives the cleanest geometry)
+  -i, --image <path|url>            Technical drawing or dimensioned sketch          [required]
+      --notes <text>                What it is, and sizes the drawing leaves out
+  -o, --out <dir>                   Folder for the files (default ./techdrawai-output/)
+
+cad-drawing options:
+  <project>                         The AI CAD project id                            [required]
+  -o, --out <path>                  Where to save the .png (default ./techdrawai-output/)
+
+model3d options:
+  -i, --image <path|url>            Photo of one object, JPG, PNG or WebP            [required]
   -d, --detail <draft|standard|high>  Mesh density (default standard)
       --no-texture                  Skip colour textures
-  -o, --out <path>                  Where to save the .glb (default ./techdrawai-output/)
+  -o, --out <dir>                   Folder for the files (default ./techdrawai-output/)
 
 Create an API key in Settings at ${DEFAULT_BASE_URL}/app?view=settings (an active plan is required).
 Config file: ${CONFIG_PATH}
@@ -121,6 +131,7 @@ const ALIASES = {
     "--thickness-mm": "thicknessMm",
     "--size-mm": "sizeMm",
     "--min-feature-mm": "minFeatureMm",
+    "--project": "project",
 };
 /** Flags that take no value. */
 const BOOLEANS = new Set(["invert", "dwg", "noTexture"]);
@@ -353,48 +364,115 @@ async function cmdStl(argv) {
     console.log(`Saved to ${path}`);
     console.log(`${result.triangles} triangles · ${result.widthMm} × ${result.heightMm} × ${result.thicknessMm} mm · threshold ${result.threshold} · no credits used`);
 }
+/* ------------------------------------------------------ 3D and CAD -- */
 /**
- * Drawing → 3D, in one call.
- *
- * Deliberately not `render` piped into `model3d`: the server does both halves
- * behind a single charge, and doing it by hand costs twice for the same mesh.
+ * Wait for a 3D or CAD job, then save its files. The server answers a start
+ * call at once; a terminal can afford to wait, so the CLI polls here (and says
+ * how to come back if the wait is cut short).
  */
+async function finishJob(client, jobId, out, what) {
+    console.error(`${what} started (job ${jobId}). Waiting for it… Ctrl+C is safe: resume with \`techdrawai job ${jobId}\`.`);
+    let last = "";
+    const job = await waitForJob(client, jobId, {
+        onTick: (j) => {
+            const line = j.status === "running" && j.progress != null ? `  ${j.progress}%` : "";
+            if (line && line !== last)
+                console.error(line);
+            last = line;
+        },
+    });
+    await reportJob(job, out);
+}
+async function reportJob(job, out) {
+    if (job.status === "running") {
+        console.log(`Still building${job.progress != null ? ` (${job.progress}%)` : ""}. Check again shortly.`);
+        return;
+    }
+    if (job.status === "failed") {
+        throw new Error(`${job.error ?? "The job failed."}${job.refunded ? " The credits were refunded." : ""}`);
+    }
+    if (job.status === "needs_input") {
+        console.log("The CAD agent needs answers before it can model this part. Nothing was charged.");
+        for (const q of job.questions ?? []) {
+            console.log(`- ${q.question} Options: ${q.options.map((o) => o.label).join("; ")}`);
+        }
+        console.log(`Answer with: techdrawai cad "<your answers>" --project ${job.projectId}`);
+        return;
+    }
+    const saved = await saveJobFiles(job, out, job.kind === "model-3d" ? "model" : "part");
+    console.log(describeSaved(saved, job));
+    if (job.summary)
+        console.log(`\n${job.summary}\n`);
+    if (job.projectId)
+        console.log(`project: ${job.projectId} (change it with --project, draw it with cad-drawing)`);
+    console.log(`Credits used: ${job.creditsUsed ?? 0}`);
+}
+/** The first argument that is neither a flag nor a flag's value. */
+function positional(argv, hint) {
+    const at = argv.findIndex((a, i) => !a.startsWith("-") && !(i > 0 && ALIASES[argv[i - 1]] !== undefined && !BOOLEANS.has(ALIASES[argv[i - 1]])));
+    if (at === -1)
+        fail(hint);
+    return { value: argv[at].trim(), rest: [...argv.slice(0, at), ...argv.slice(at + 1)] };
+}
+/** AI CAD: `techdrawai cad "<part>" [-i img]... [--project id] [-o dir]`. */
+async function cmdCad(argv) {
+    // -i may repeat here (up to three images), so it is collected before the shared parser.
+    const images = [];
+    const others = [];
+    for (let i = 0; i < argv.length; i++) {
+        if (argv[i] === "-i" || argv[i] === "--image") {
+            const value = argv[++i];
+            if (value === undefined)
+                fail(`Option ${argv[i - 1]} needs a value.`);
+            images.push(value);
+        }
+        else
+            others.push(argv[i]);
+    }
+    if (images.length > 3)
+        fail("At most three images per part.");
+    const { value: prompt, rest } = positional(others, 'Describe the part in quotes, e.g. techdrawai cad "L bracket 40 x 40 x 30 mm, 4 mm wall, two 5.5 mm holes per flange".');
+    const flags = parseFlags(rest);
+    const client = TechDrawAiClient.fromConfig();
+    const r = await client.aiCad({ prompt, images, projectId: str(flags, "project") });
+    console.error(`Charged ${r.creditsUsed} credits (refunded if nothing is built) · balance ${r.balance} · project ${r.projectId}`);
+    await finishJob(client, r.jobId, str(flags, "out"), "AI CAD part");
+}
 async function cmdDrawing3d(argv) {
     const flags = parseFlags(argv);
     const image = required(flags, "image", "--image");
     const client = TechDrawAiClient.fromConfig();
-    console.error("Picturing the object, then reconstructing it… (this usually takes 1–3 minutes)");
-    const result = await client.drawingTo3d({
-        image,
-        productName: str(flags, "name"),
-        style: choice(str(flags, "style"), ["photoreal", "studio", "clay", "lifestyle"], "--style"),
-        detail: choice(str(flags, "detail"), ["draft", "standard", "high"], "--detail"),
-        textured: flags.noTexture === true ? false : undefined,
-    });
-    if (!result.modelUrls.glb)
-        throw new Error("The server returned no GLB model.");
-    const target = await downloadToFile(result.modelUrls.glb, str(flags, "out"), "model", "glb");
-    console.log(`Saved to ${target}`);
-    console.log(`${result.polycount.toLocaleString()} triangles · ${result.textured ? "textured" : "untextured"} · detail ${result.detail} · ${result.style} render`);
-    console.log("It follows the proportions of the drawing, not its dimensions.");
-    console.log(`Credits used: ${result.creditsUsed} · Balance: ${result.balance}`);
+    const r = await client.drawingTo3d({ image, notes: str(flags, "notes") });
+    console.error(`Charged ${r.creditsUsed} credits (refunded if nothing is built) · balance ${r.balance} · project ${r.projectId}`);
+    await finishJob(client, r.jobId, str(flags, "out"), "CAD part from the drawing");
 }
 async function cmdModel3d(argv) {
     const flags = parseFlags(argv);
     const image = required(flags, "image", "--image");
     const client = TechDrawAiClient.fromConfig();
-    console.error("Reconstructing a 3D model… (this usually takes 1–3 minutes)");
-    const result = await client.model3d({
+    const r = await client.model3d({
         image,
         detail: choice(str(flags, "detail"), ["draft", "standard", "high"], "--detail"),
         textured: flags.noTexture === true ? false : undefined,
     });
-    if (!result.modelUrls.glb)
-        throw new Error("The server returned no GLB model.");
-    const target = await downloadToFile(result.modelUrls.glb, str(flags, "out"), "model", "glb");
-    console.log(`Saved to ${target}`);
-    console.log(`${result.polycount.toLocaleString()} triangles · ${result.textured ? "textured" : "untextured"} · detail ${result.detail}`);
-    console.log(`Credits used: ${result.creditsUsed} · Balance: ${result.balance}`);
+    console.error(`Charged ${r.creditsUsed} credits (refunded if it fails) · balance ${r.balance}`);
+    await finishJob(client, r.jobId, str(flags, "out"), "3D model");
+}
+async function cmdCadDrawing(argv) {
+    const { value: projectId, rest } = positional(argv, "Give the AI CAD project id, e.g. techdrawai cad-drawing 5f1e0c2a-…");
+    const flags = parseFlags(rest);
+    const client = TechDrawAiClient.fromConfig();
+    console.error("Drawing the part from the CAD model… (usually one to two minutes)");
+    const r = await client.cadDrawing(projectId);
+    console.log(`Saved to ${saveImage(r.image, str(flags, "out"), "cad-drawing")}`);
+    console.log(`Edit it at ${r.editUrl}`);
+    console.log(`Credits used: ${r.creditsUsed} · Balance: ${r.balance ?? "unknown"}`);
+}
+async function cmdJob(argv) {
+    const { value: jobId, rest } = positional(argv, "Give the job id, e.g. techdrawai job 0b9c…");
+    const flags = parseFlags(rest);
+    const client = TechDrawAiClient.fromConfig();
+    await reportJob(await client.job(jobId), str(flags, "out"));
 }
 async function cmdIdentify(argv) {
     const flags = parseFlags(argv);
@@ -474,6 +552,13 @@ async function main() {
         case "stl":
         case "extrude":
             return cmdStl(rest);
+        case "cad":
+        case "ai-cad":
+            return cmdCad(rest);
+        case "cad-drawing":
+            return cmdCadDrawing(rest);
+        case "job":
+            return cmdJob(rest);
         case "drawing3d":
             return cmdDrawing3d(rest);
         case "model3d":

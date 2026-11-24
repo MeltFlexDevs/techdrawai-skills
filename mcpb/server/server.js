@@ -3,7 +3,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ApiError, TechDrawAiClient } from "./api.js";
 import { DRAWING_COST, MODEL_3D_COST } from "./config.js";
-import { downloadToFile, saveBuffer, saveImage, saveText, withExtension, } from "./util.js";
+import { describeSaved, saveJobFiles } from "./jobs.js";
+import { saveBuffer, saveImage, saveText, withExtension, } from "./util.js";
 /**
  * Read from package.json rather than written out here. A hardcoded copy is a
  * third place to remember on every release — and the one that goes stale
@@ -383,117 +384,154 @@ export function createServer() {
             return toolError("STL conversion", err);
         }
     });
-    /* ---------------------------------------------------- photo → 3D -- */
-    server.registerTool("photo_to_3d", {
-        title: "Reconstruct a 3D model from a photo",
-        description: "Turn a photograph of a single object into a textured 3D mesh, downloadable as GLB (and FBX, OBJ, USDZ, STL). " +
-            "Reconstruction is asynchronous on the server and typically takes one to three minutes — the call blocks until the mesh is ready. " +
-            "Needs a clear photo of one object, as JPG or PNG. " +
-            `Costs ${MODEL_3D_COST} credits and requires the Studio plan. The GLB is downloaded to disk and its path returned.`,
+    /* ------------------------------------------------- 3D and CAD jobs -- */
+    const jobStarted = (what, jobId, extra, credits, balance) => text(`${what} started. job_id: ${jobId}${extra}\n` +
+        `Credits charged: ${credits} (refunded automatically if nothing is built) · Balance: ${balance ?? "unknown"}\n\n` +
+        "Call check_job with this job_id about every 30 seconds; when it is done the files are downloaded to disk.");
+    const CAD_FILES = "an exact, editable CAD part: a STEP file for CAD programs (Fusion, SolidWorks, FreeCAD, Onshape), an STL for " +
+        "3D printing and a 3MF for slicers, modelled by TechDraw AI's AI CAD agent, which writes build123d (OpenCascade) " +
+        "code, runs it, measures the result and checks it against the request";
+    server.registerTool("text_to_cad", {
+        title: "Model a CAD part from a description",
+        description: `AI CAD, as on techdrawai.com/app/ai-cad: turn a written description into ${CAD_FILES}. Dimensions are exact, ` +
+            "not estimated: put every size the user gave in the prompt. Best for brackets, enclosures, mounts, flanges, " +
+            "adapters, spacers, gears and other mechanical parts. Up to three photos, sketches or drawings can go in `images` " +
+            "(sizes written on them are used exactly). To change a part already made, pass its project_id with the change. " +
+            "Starts a background job (two to eight minutes) and returns a job_id for check_job. " +
+            `Costs ${MODEL_3D_COST} credits and requires the Studio plan; refunded if nothing is built.`,
         inputSchema: {
-            image: z
-                .string()
-                .describe("The product photo (JPG or PNG): a local file path, an http(s) URL, or a data:image/…;base64,… URL."),
-            detail: z
-                .enum(["draft", "standard", "high"])
+            prompt: z.string().max(8000).describe("The part: what it is, every dimension in mm, holes, fillets, material."),
+            images: z
+                .array(z.string())
+                .max(3)
                 .optional()
-                .describe("Mesh density: draft (12k triangles), standard (40k, default) or high (80k). Barely affects generation time."),
-            textured: z
-                .boolean()
-                .optional()
-                .describe("Generate colour textures. Defaults to true."),
-            output_path: z
+                .describe("Up to three photos, sketches or drawings: local file paths, http(s) URLs or data:image URLs."),
+            project_id: z
                 .string()
                 .optional()
-                .describe("Where to save the .glb. Defaults to ./techdrawai-output/model-<timestamp>.glb."),
+                .describe("A project_id from an earlier text_to_cad or drawing_to_3d job, to change that part."),
         },
     }, async (args) => {
         try {
             const client = TechDrawAiClient.fromConfig();
-            const result = await client.model3d({
-                image: args.image,
-                detail: args.detail,
-                textured: args.textured,
-            });
-            if (!result.modelUrls.glb) {
-                throw new Error("The server returned no GLB model.");
-            }
-            const target = await downloadToFile(result.modelUrls.glb, args.output_path, "model", "glb");
-            const others = Object.entries(result.modelUrls)
-                .filter(([format, url]) => format !== "glb" && url)
-                .map(([format]) => format);
-            return text(`3D model saved to:\n  ${target}\n\n` +
-                `${result.polycount.toLocaleString()} triangles · ${result.textured ? "textured" : "untextured"} · detail ${result.detail}\n` +
-                (others.length
-                    ? `Also available from the server as: ${others.join(", ")} (links expire shortly).\n`
-                    : "") +
-                `Credits used: ${result.creditsUsed} · Balance: ${result.balance}`);
+            const r = await client.aiCad({ prompt: args.prompt, images: args.images, projectId: args.project_id });
+            return jobStarted("CAD part", r.jobId, ` · project_id: ${r.projectId}`, r.creditsUsed, r.balance);
+        }
+        catch (err) {
+            return toolError("AI CAD", err);
+        }
+    });
+    server.registerTool("drawing_to_3d", {
+        title: "Model a CAD part from a technical drawing",
+        description: `Turn a technical drawing or a dimensioned sketch into ${CAD_FILES}. The dimensions written on the drawing ` +
+            "are used exactly; `notes` carries anything the sheet leaves out. The same AI CAD agent as text_to_cad. " +
+            "Starts a background job (two to eight minutes) and returns a job_id for check_job. " +
+            `Costs ${MODEL_3D_COST} credits and requires the Studio plan; refunded if nothing is built.`,
+        inputSchema: {
+            image: z
+                .string()
+                .describe("The drawing or sketch (JPG, PNG or WebP): a local file path, an http(s) URL, or a data:image URL."),
+            notes: z.string().max(8000).optional().describe("What the part is, and any size the drawing leaves out, in mm."),
+        },
+    }, async (args) => {
+        try {
+            const client = TechDrawAiClient.fromConfig();
+            const r = await client.drawingTo3d({ image: args.image, notes: args.notes });
+            return jobStarted("CAD part", r.jobId, ` · project_id: ${r.projectId}`, r.creditsUsed, r.balance);
+        }
+        catch (err) {
+            return toolError("Drawing to 3D", err);
+        }
+    });
+    server.registerTool("cad_to_drawing", {
+        title: "Draw an AI CAD part as a technical drawing",
+        description: "Make a dimensioned technical drawing of a finished AI CAD part (a project_id from text_to_cad or " +
+            "drawing_to_3d): the exact model drawn from every side with its measured sizes, holes and radii, drafted as an " +
+            "ISO A3 sheet. One to two minutes; the PNG is saved to disk and its path returned, and the drawing is saved to " +
+            `the user's TechDraw AI projects for editing. Costs ${DRAWING_COST} credits and requires the Studio plan.`,
+        inputSchema: {
+            project_id: z.string().describe("The CAD part's project_id."),
+            output_path: z
+                .string()
+                .optional()
+                .describe("Where to save the PNG. Defaults to ./techdrawai-output/cad-drawing-<timestamp>.png."),
+        },
+    }, async (args) => {
+        try {
+            const client = TechDrawAiClient.fromConfig();
+            const r = await client.cadDrawing(args.project_id);
+            const path = saveImage(r.image, args.output_path, "cad-drawing");
+            return text(`Technical drawing of ${r.title} saved to:\n  ${path}\n\nEdit it at ${r.editUrl}\n` +
+                `Credits used: ${r.creditsUsed} · Balance: ${r.balance ?? "unknown"}`);
+        }
+        catch (err) {
+            return toolError("CAD drawing", err);
+        }
+    });
+    server.registerTool("photo_to_3d", {
+        title: "Reconstruct a textured 3D model from a photo",
+        description: "Turn a photo of one real object (furniture, a product) into a textured 3D mesh, as Photo to 3D CAD on " +
+            "techdrawai.com: GLB, STL, OBJ, FBX and USDZ. It follows the photo's shape and colours, not exact dimensions; " +
+            "for a part with real sizes use text_to_cad. Starts a background job (usually one to five minutes) and returns " +
+            `a job_id for check_job. Costs ${MODEL_3D_COST} credits and requires the Studio plan; refunded if it fails.`,
+        inputSchema: {
+            image: z
+                .string()
+                .describe("The photo (JPG, PNG or WebP): a local file path, an http(s) URL, or a data:image URL."),
+            detail: z.enum(["draft", "standard", "high"]).optional().describe("Mesh density. Default standard."),
+            textured: z.boolean().optional().describe("Colour textures from the photo. Default true."),
+        },
+    }, async (args) => {
+        try {
+            const client = TechDrawAiClient.fromConfig();
+            const r = await client.model3d({ image: args.image, detail: args.detail, textured: args.textured });
+            return jobStarted("3D model", r.jobId, "", r.creditsUsed, r.balance);
         }
         catch (err) {
             return toolError("3D reconstruction", err);
         }
     });
-    /* -------------------------------------------------- drawing → 3D -- */
-    server.registerTool("drawing_to_3d", {
-        title: "Reconstruct a 3D model from a technical drawing",
-        description: "Turn a technical drawing — orthographic views, the kind `generate_technical_drawing` produces — into a textured 3D mesh, downloadable as GLB (and FBX, OBJ, USDZ, STL). " +
-            "A drawing is line art and nothing reconstructs 3D from line art, so the server first renders the object the views describe and reconstructs that render; both happen in one call and are charged once. " +
-            `Chaining \`render_product\` into \`photo_to_3d\` yourself does the same work and pays for the render on top — ${DRAWING_COST + MODEL_3D_COST} credits instead of ${MODEL_3D_COST}, because here the render is a step of the reconstruction rather than a second purchase. ` +
-            "The model follows the proportions of the drawing, not its dimensions — for a mesh that honours the numbers, the drawing has to be modelled in CAD. " +
-            "Typically one to three minutes; the call blocks until the mesh is ready. " +
-            `Costs ${MODEL_3D_COST} credits and requires the Studio plan. The GLB is downloaded to disk and its path returned.`,
+    server.registerTool("check_job", {
+        title: "Check a 3D or CAD job",
+        description: "Report on a job started by text_to_cad, drawing_to_3d or photo_to_3d. While it runs, says so; when it is done, " +
+            "downloads every file (STEP, STL, 3MF for a CAD part; GLB, STL, OBJ, FBX, USDZ for a photo model) to disk and " +
+            "returns the paths. Free. Poll about every 30 seconds.",
         inputSchema: {
-            image: z
-                .string()
-                .describe("The technical drawing (JPG, PNG or WebP): a local file path, an http(s) URL, or a data:image/…;base64,… URL."),
-            product_name: z
-                .string()
-                .optional()
-                .describe('What the drawing depicts, e.g. "wall bracket". Grounds the render, which is what the mesh follows.'),
-            style: z
-                .enum(["photoreal", "studio", "clay", "lifestyle"])
-                .optional()
-                .describe("The render the mesh is built from. photoreal (default) keeps materials and colour; clay is matte grey and reconstructs the cleanest geometry, because a specular surface gives the depth estimate nothing to lock onto."),
-            detail: z
-                .enum(["draft", "standard", "high"])
-                .optional()
-                .describe("Mesh density: draft (12k triangles), standard (40k, default) or high (80k)."),
-            textured: z
-                .boolean()
-                .optional()
-                .describe("Generate colour textures. Defaults to true."),
-            output_path: z
-                .string()
-                .optional()
-                .describe("Where to save the .glb. Defaults to ./techdrawai-output/model-<timestamp>.glb."),
+            job_id: z.string().describe("The job_id the tool returned."),
+            output_dir: z.string().optional().describe("Folder for the files. Defaults to ./techdrawai-output."),
         },
     }, async (args) => {
         try {
             const client = TechDrawAiClient.fromConfig();
-            const result = await client.drawingTo3d({
-                image: args.image,
-                productName: args.product_name,
-                style: args.style,
-                detail: args.detail,
-                textured: args.textured,
-            });
-            if (!result.modelUrls.glb) {
-                throw new Error("The server returned no GLB model.");
+            const job = await client.job(args.job_id);
+            if (job.status === "running") {
+                const pct = job.progress != null ? ` (${job.progress}%)` : "";
+                return text(`Still building${pct}. Check again in 30 seconds.`);
             }
-            const target = await downloadToFile(result.modelUrls.glb, args.output_path, "model", "glb");
-            const others = Object.entries(result.modelUrls)
-                .filter(([format, url]) => format !== "glb" && url)
-                .map(([format]) => format);
-            return text(`3D model saved to:\n  ${target}\n\n` +
-                `${result.polycount.toLocaleString()} triangles · ${result.textured ? "textured" : "untextured"} · detail ${result.detail} · ${result.style} render\n` +
-                (others.length
-                    ? `Also available from the server as: ${others.join(", ")} (links expire shortly).\n`
+            if (job.status === "failed") {
+                return {
+                    isError: true,
+                    content: [{ type: "text", text: `${job.error ?? "The job failed."}${job.refunded ? " The credits were refunded." : ""}` }],
+                };
+            }
+            if (job.status === "needs_input") {
+                const asked = (job.questions ?? [])
+                    .map((q) => `- ${q.question} Options: ${q.options.map((o) => o.label).join("; ")}`)
+                    .join("\n");
+                return text(`The CAD agent needs answers before it can model this part. Nothing was charged.\n${asked}\n` +
+                    `Ask the user, then call text_to_cad again with their answers and project_id: ${job.projectId}.`);
+            }
+            const prefix = job.kind === "model-3d" ? "model" : "part";
+            const saved = await saveJobFiles(job, args.output_dir, prefix);
+            return text(`${job.kind === "model-3d" ? "3D model" : "CAD part"} ready:\n${describeSaved(saved, job)}\n` +
+                (job.summary ? `\nWhat the CAD agent built:\n${job.summary}\n` : "") +
+                (job.projectId
+                    ? `\nproject_id: ${job.projectId} (text_to_cad changes it; cad_to_drawing draws it).\n`
                     : "") +
-                `It follows the proportions of the drawing, not its dimensions.\n` +
-                `Credits used: ${result.creditsUsed} · Balance: ${result.balance}`);
+                `Credits used: ${job.creditsUsed ?? 0}`);
         }
         catch (err) {
-            return toolError("Drawing to 3D", err);
+            return toolError("Job check", err);
         }
     });
     /* -------------------------------------------------- identify object -- */

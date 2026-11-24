@@ -19,10 +19,11 @@ Inputs are image URLs. A local file goes in through `upload_file` and its curl c
   - A photo of an object comes out as its outline in relief, not as the object.
 - **`photo_to_3d`** (80 credits, Studio plan) reconstructs a textured mesh (GLB plus STL) from a photo of **one** object.
   - A cluttered photo reconstructs the clutter. Ask for a clean shot against a plain background.
-- **`drawing_to_3d`** (80 credits, Studio plan) builds a textured mesh from a technical drawing.
-  - It follows the drawing's proportions, not its exact dimensions. Say so before anyone machines from it. If exact dimensions matter, use `text_to_cad` instead.
-- **`check_job`** (free) reports on a 3D job: still building, or the finished files.
-  - Both 3D tools return a `job_id`. In Claude's apps the card polls by itself. Elsewhere, call `check_job` every 30 seconds until the files are ready, usually one to four minutes.
+  - It follows the photo's shape and colours, not exact dimensions: right for furniture, products and AR, wrong for a part to machine.
+- **`drawing_to_3d`** (80 credits, Studio plan) models the part a technical drawing or dimensioned sketch describes as exact CAD (STEP, STL, 3MF), with the dimensions on the sheet used as written. It is the same AI CAD agent as `text_to_cad`.
+- **`cad_to_drawing`** (5 credits, Studio plan) draws a finished CAD part (its `project_id`) as a dimensioned technical drawing made from the exact model.
+- **`check_job`** (free) reports on a 3D or CAD job: still building, or the finished files.
+  - The 3D tools return a `job_id`. In Claude's apps the card polls by itself. Elsewhere, call `check_job` every 30 seconds until the files are ready: one to five minutes for a photo model, two to eight for a CAD part.
 - **`get_credits`** (free) shows the balance, the plan and what each operation costs. Call it before a batch.
 
 ## How to work

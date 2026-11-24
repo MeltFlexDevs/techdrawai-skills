@@ -109,7 +109,20 @@ The geometry is reconstructed from the views, so the render follows the drawing 
   textured: false
 ```
 
-Turn textures off when the user only wants geometry to print or to check clearance. It takes one to three minutes and blocks until it is done, so say it is running. The photo has to show **one** object; a cluttered bench reconstructs the clutter.
+Turn textures off when the user only wants geometry to print or to check clearance. It returns a `job_id`: poll `check_job` every 30 seconds (one to five minutes), and the files are saved when it is done. The photo has to show **one** object; a cluttered bench reconstructs the clutter. The mesh follows the photo's shape, not exact sizes.
+
+## A CAD part with exact sizes, and its drawing
+
+```
+[text_to_cad]
+  prompt: "NEMA 17 motor plate, 60 x 60 x 5 mm, 22 mm centre bore, four M3 holes on a 31 mm square"
+→ job_id, project_id
+
+[check_job] job_id → part.step, part.stl, part.3mf
+[cad_to_drawing] project_id → a dimensioned drawing from the exact model
+```
+
+`drawing_to_3d` does the same from a technical drawing or a dimensioned sketch.
 
 ## A trace that comes back empty
 
